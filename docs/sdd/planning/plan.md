@@ -4,7 +4,8 @@
 
 | Phase | 먼저 확정할 문서·결정 | 구현 작업 | 종료 조건 |
 | --- | --- | --- | --- |
-| 1 Foundation | Google·Kakao PKCE·콜백 계약, 공통 API 오류, DB·시간대 기준, 계정 삭제·최근 인증 계약 | Expo Router, NestJS, Prisma/PostgreSQL, OAuth 인증·Settings·계정 삭제, 공통 오류 처리 | `AC-AUTH-*`, 소유권 검증 |
+| 0 RN 로컬 프로토타입 | Schedule 분 단위 불변식, Session 상태·시간 계산, snapshot·통계 기준 | Expo Router, AsyncStorage Repository, Zustand 액션, fixture·hydration, 공통 UI | 로컬 Todo·Schedule·Timer·Stats·Settings 흐름과 도메인 단위 검증 |
+| 1 Foundation | Google·Kakao PKCE·콜백 계약, 공통 API 오류, DB·시간대 기준, 계정 삭제·최근 인증 계약 | NestJS, Prisma/PostgreSQL, OAuth 인증·Settings·계정 삭제, AsyncStorage Repository를 API Repository로 교체 | `AC-AUTH-*`, 소유권 검증 |
 | 2 Todo·Today | Todo 이동·삭제 정책, Today 날짜 계약 | Todo CRUD·트리·Today 지정, Today 화면 | `AC-TODO-*` |
 | 3 Session | 시간 계산, 상태 전이, 충돌 응답, 알림 ID | Focus/Break API, 타이머, 단일 활성 제약, 복원, 알림 | `AC-SESSION-*`, `AC-NOTIFY-*` |
 | 4 Schedule | 시각 입력·Block 참조 보존 | Day View, 블록 CRUD, 연결 Focus, 계획 외 Focus | `AC-SCHEDULE-*` |

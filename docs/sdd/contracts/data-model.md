@@ -14,6 +14,17 @@
 | `session_requests` | id, user_id, client_request_id, action, payload_hash, session_id?, response_status, response_body, created_at | `(user_id,client_request_id)` unique, 처리 결과 보존과 같은 요청 재적용 방지 |
 | `settings` | id, user_id, default_focus_minutes, short_break_minutes, long_break_minutes, timer_mode, focus_notification_enabled, break_notification_enabled, created_at, updated_at | user_id unique |
 
+## 로컬 RN 프로토타입 모델
+
+로컬 프로토타입은 AsyncStorage Repository가 단독으로 저장·복원한다. Zustand는 UI가 호출하는 액션과 메모리 상태만 관리하며 직접 영속화하지 않는다.
+
+| 모델 | 핵심 필드 |
+| --- | --- |
+| `ScheduleBlock` | id, dateKey, startMinute, endMinute, title, todoId?, deletedAt? |
+| `Session` | id, type, status, todoId?, scheduleBlockId?, targetSeconds, accumulatedSeconds, lastResumedAt?, startedAt, completedAt?, measuredSeconds?, recordedSeconds?, completionMode?, localStartDate, timezoneId, utcOffsetMinutes, todoSnapshot?, todoStatsPathSnapshot?, scheduleSnapshot? |
+
+`ScheduleBlock`은 계획이므로 날짜와 분 단위를, `Session`은 실제 사건이므로 epoch timestamp를 사용한다. 완료 시 통계는 `recordedSeconds`를 쓰고, Timer로 측정한 원래 값은 `measuredSeconds`에 남긴다. 삭제되는 Block과 연결된 완료 Focus에는 삭제 직전 제목·날짜·시작·종료를 `scheduleSnapshot`으로 기록해 과거 계획 비교를 고정한다.
+
 ## DB에서 반드시 고려할 정합성
 
 - `sessions`의 사용자별 활성 단일성은 `status IN ('RUNNING','PAUSED')` 조건의 PostgreSQL partial unique index가 필요하다. Prisma 모델만으로 표현되지 않는 제약은 migration SQL로 관리한다.

@@ -1,6 +1,6 @@
 # Session 상태 전이
 
-`idle`은 DB 상태가 아니라 활성 Session이 없는 App 상태다. 종류는 `FOCUS`, `SHORT_BREAK`, `LONG_BREAK`이며 상태는 `RUNNING`, `PAUSED`, `COMPLETED`, `DISCARDED`다. 서버가 전이와 경과 시간의 최종 기준이다.
+`idle`은 DB 상태가 아니라 활성 Session이 없는 App 상태다. 종류는 `FOCUS`, `SHORT_BREAK`, `LONG_BREAK`이며 상태는 `RUNNING`, `PAUSED`, `COMPLETED`, `DISCARDED`다. 로컬 프로토타입은 기기 저장소, 서버 단계에서는 서버가 전이와 경과 시간의 최종 기준이다. `RUNNING`과 `PAUSED`를 합쳐 활성 Session은 최대 하나다.
 
 ## 전이표
 
@@ -16,7 +16,7 @@
 
 Complete 화면에서 사용자가 시간을 수정하면 `completionMode=MANUAL`이 된다. 서버는 입력된 `durationSeconds`를 최종 기록으로 확정하고 계산된 실제 경과는 `measuredDurationSeconds`에 보존한다. 통계는 최종 기록을 사용하며 기록 화면에는 수동 입력임을 표시한다.
 
-시간 단위는 초다. `startedAt`은 가장 최근 RUNNING 구간의 시작 시각이므로 Resume 때 갱신한다. Pause 중에는 `accumulatedSeconds`가 그대로 유지된다. Complete의 duration은 RUNNING이면 현재 구간까지 더하고 PAUSED이면 누적값을 사용한다. 목표 시간보다 일찍 Complete해도 실제 시간을 저장한다. 목표 도달 시 서버 상태는 그대로이며 App에서 완료 또는 계속 기록을 선택하게 한다.
+시간 단위는 초다. `lastResumedAt`은 가장 최근 RUNNING 구간의 시작 epoch이고 Resume 때 갱신한다. 실행 경과는 `accumulatedSeconds + (now - lastResumedAt)`이며 Pause 때 누적값을 확정하고 `lastResumedAt=null`로 둔다. 앱 복귀·재실행은 이 식으로 복원하며 매초 저장하지 않는다. 목표 도달은 상태를 바꾸지 않고 Session당 알림을 한 번만 예약한다. `targetSeconds`는 시작 후 바꿀 수 없고, 목표를 초과해도 경과 시간은 계속 증가한다.
 
 ## 거부 조건과 동시성
 
