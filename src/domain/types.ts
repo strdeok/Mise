@@ -45,6 +45,7 @@ export type Session = {
   recordedSeconds: number | null;
   completionMode: CompletionMode | null;
   targetReachedNotified: boolean;
+  continuedPastTargetAt: number | null;
   localStartDate: string;
   timezoneId: string;
   utcOffsetMinutes: number;

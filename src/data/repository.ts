@@ -17,7 +17,7 @@ export const fixture = (): AppData => {
       { id: 'block-1', dateKey: today, startMinute: 9 * 60, endMinute: 10 * 60, title: '타이머 화면 구현', todoId: 'timer', deletedAt: null },
       { id: 'block-2', dateKey: today, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 15, title: '통계 카드 정리', todoId: 'stats', deletedAt: null },
     ],
-    sessions: [{ id: 'session-demo', type: 'focus', status: 'completed', todoId: 'timer', scheduleBlockId: 'block-1', targetSeconds: 1500, accumulatedSeconds: 0, lastResumedAt: null, startedAt: now - 86400000, completedAt: now - 84600000, measuredSeconds: 1800, recordedSeconds: 1800, completionMode: 'actual', targetReachedNotified: true, localStartDate: today, timezoneId: Intl.DateTimeFormat().resolvedOptions().timeZone, utcOffsetMinutes: -new Date().getTimezoneOffset(), todoSnapshot: { title: '타이머 화면 구현', path: ['Mise Table', '타이머 화면 구현'] }, todoStatsPathSnapshot: null, scheduleSnapshot: null }],
+    sessions: [{ id: 'session-demo', type: 'focus', status: 'completed', todoId: 'timer', scheduleBlockId: 'block-1', targetSeconds: 1500, accumulatedSeconds: 0, lastResumedAt: null, startedAt: now - 86400000, completedAt: now - 84600000, measuredSeconds: 1800, recordedSeconds: 1800, completionMode: 'actual', targetReachedNotified: true, continuedPastTargetAt: null, localStartDate: today, timezoneId: Intl.DateTimeFormat().resolvedOptions().timeZone, utcOffsetMinutes: -new Date().getTimezoneOffset(), todoSnapshot: { title: '타이머 화면 구현', path: ['Mise Table', '타이머 구현'] }, todoStatsPathSnapshot: null, scheduleSnapshot: null }],
     settings,
   };
 };
