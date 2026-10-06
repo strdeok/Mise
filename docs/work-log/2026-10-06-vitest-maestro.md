@@ -22,6 +22,7 @@
 - `cd frontend && npx tsc --noEmit` 통과.
 - `cd frontend && npx expo export --platform web` 통과.
 - Maestro CLI `2.11.0` 설치 및 `maestro test` 명령 도움말 확인.
+- Android Emulator와 iOS Simulator의 기동 상태를 확인했다. 새 네이티브 빌드 설치는 Maven 아티팩트 다운로드 지연으로 완료되지 않았으며, 재현·처리는 [트러블슈팅 기록](../troubleshooting/native-build-maven-download.md)에 남겼다.
 
 ## 남은 일
 
