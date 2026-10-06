@@ -1,0 +1,18 @@
+appId: com.strdeok.misetable
+---
+- launchApp:
+    clearState: true
+- assertVisible: "오늘의 Mise"
+- tapOn: "할 일"
+- assertVisible: "전체 Todo"
+- tapOn: "+ 추가"
+- tapOn: "예: 통계 화면 구현"
+- inputText: "Maestro 검증"
+- tapOn: "저장"
+- assertVisible: "Maestro 검증"
+- tapOn: "일정"
+- assertVisible: "캘린더"
+- tapOn: "주"
+- assertVisible: "일주일 시간표"
+- tapOn: "일"
+- assertVisible: "하루 시간표"

@@ -23,17 +23,20 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-calendars": "^1.1314.0",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.10.1",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
   },
   "scripts": {
     "start": "expo start",
@@ -41,7 +44,11 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e:android": "${MAESTRO_BIN:-$HOME/.maestro/bin/maestro} test .maestro/android-smoke.yaml",
+    "test:e2e:ios": "${MAESTRO_BIN:-$HOME/.maestro/bin/maestro} test .maestro/ios-smoke.yaml"
   },
   "private": true
 }

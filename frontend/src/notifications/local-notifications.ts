@@ -5,15 +5,24 @@ import { activeSession, elapsedSeconds } from '@/domain/logic';
 
 Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }) });
 const channelId = 'mise-timer';
-export async function notificationPermission() {
+export async function notificationPermissionStatus() {
   if (Platform.OS === 'android') await Notifications.setNotificationChannelAsync(channelId, { name: '타이머', importance: Notifications.AndroidImportance.HIGH });
   const current = await Notifications.getPermissionsAsync();
   if (current.granted || current.ios?.status === Notifications.IosAuthorizationStatus.AUTHORIZED) return 'granted';
+  return current.canAskAgain ? 'undetermined' : 'denied';
+}
+export async function notificationPermission() {
+  const status = await notificationPermissionStatus();
+  if (status === 'granted') return status;
   const next = await Notifications.requestPermissionsAsync(); return next.granted ? 'granted' : 'denied';
 }
 export async function clearSessionNotification(sessionId: string) {
-  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  await Promise.all(scheduled.filter((item) => item.content.data?.sessionId === sessionId).map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)));
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(scheduled.filter((item) => item.content.data?.sessionId === sessionId).map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)));
+  } catch {
+    // 알림 API를 쓸 수 없는 웹에서도 타이머 상태 전이는 계속 진행한다.
+  }
 }
 export async function scheduleSessionNotification(session: Session, enabled: boolean) {
   await clearSessionNotification(session.id); if (!enabled || session.status !== 'running') return;

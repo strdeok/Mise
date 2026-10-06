@@ -1,0 +1,15 @@
+appId: com.strdeok.misetable
+---
+- launchApp:
+    clearState: true
+- assertVisible: "오늘의 Mise"
+- tapOn: "오늘"
+- tapOn:
+    text: "집중"
+    index: 0
+- assertVisible: "집중 중"
+- tapOn: "열기 ›"
+- assertVisible: "FOCUS"
+- assertVisible: "일시정지"
+- tapOn: "일시정지"
+- assertVisible: "재개"

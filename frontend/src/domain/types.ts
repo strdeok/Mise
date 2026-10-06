@@ -10,6 +10,7 @@ export type Todo = {
   status: TodoStatus;
   order: number;
   todayDateKeys: string[];
+  archivedAt?: number | null;
 };
 
 export type ScheduleBlock = {
@@ -52,6 +53,8 @@ export type Session = {
   todoSnapshot: TodoSnapshot | null;
   todoStatsPathSnapshot: string[] | null;
   scheduleSnapshot: ScheduleSnapshot | null;
+  /** Todo가 삭제되어 사용자 통계에서 숨긴 기록인지 여부. */
+  excludedFromStatsAt?: number | null;
 };
 
 export type Settings = {

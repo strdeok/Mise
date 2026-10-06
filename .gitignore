@@ -2,12 +2,17 @@
 
 # dependencies
 node_modules/
+frontend/node_modules/
+backend/node_modules/
 
 # Expo
 .expo/
 dist/
+frontend/.expo/
+frontend/dist/
 web-build/
 expo-env.d.ts
+frontend/expo-env.d.ts
 
 # Native
 .kotlin/
@@ -41,3 +46,9 @@ example
 # generated native folders
 /ios
 /android
+/frontend/ios
+/frontend/android
+
+# local Android installation artifacts
+/artifacts/*.apk
+/artifacts/*.aab

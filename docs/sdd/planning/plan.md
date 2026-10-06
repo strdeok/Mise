@@ -2,6 +2,8 @@
 
 각 Phase의 작업은 명세·계약 확정 → 구현 → 인수 기준 검증 순서로 진행한다. 이 문서는 작업 분해 초안이며 현재 완료 상태를 주장하지 않는다.
 
+현재의 제품 단계와 구현 우선순위는 [MVP 및 출시 로드맵](release-roadmap.md)이 기준이다. 아래 표의 서버 Foundation 이후 단계는 MVP-1 완료 뒤 Release-1에서 수행한다. 로컬 Todo·Schedule·Timer·알림·Stats의 구현 순서는 로드맵의 MVP-0 순서를 따른다.
+
 | Phase | 먼저 확정할 문서·결정 | 구현 작업 | 종료 조건 |
 | --- | --- | --- | --- |
 | 0 RN 로컬 프로토타입 | Schedule 분 단위 불변식, Session 상태·시간 계산, snapshot·통계 기준 | Expo Router, AsyncStorage Repository, Zustand 액션, fixture·hydration, 공통 UI | 로컬 Todo·Schedule·Timer·Stats·Settings 흐름과 도메인 단위 검증 |

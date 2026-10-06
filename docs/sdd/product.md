@@ -23,11 +23,12 @@ App은 DB에 직접 접근하지 않는다. 서버가 사용자 데이터의 기
 
 | 단계 | 포함 |
 | --- | --- |
-| P0 | Google·Kakao OAuth 2.0/OIDC 로그인과 계정 삭제, Todo 3단계·Today, Day View 시간표, Focus/Break와 단일 활성 세션, 로컬 알림과 복원, 주·월 통계, 계획·실제 비교, 설정 |
-| P1 | Apple 로그인(후속), 월간 캘린더, Schedule 제스처 편집, 상세 기록 히스토리 |
-| P2+ | 서버 Push 및 외부 서비스 연동 검토 |
+| MVP-0 | 인증 없이 고정 mock 사용자로 시작하는 기기 로컬 앱. Todo 3단계·Today, 월간 Calendar 기본의 주·일 시간표, Focus/Break와 단일 활성 세션, 로컬 알림과 복원, 주·월 통계, 계획·실제 비교, 설정 |
+| MVP-1 | 온보딩, 오류·빈 상태, 로컬 내보내기·초기화, 접근성, 실제 기기 QA, 스토어 기본 자산 |
+| Release-1 | Google·Kakao OAuth 2.0/OIDC, iOS 심사 요건에 따른 Apple 로그인, Node.js API·DB, 계정 삭제, 기기 간 동기화 |
+| Release-2+ | 오프라인 동기화·충돌·백업, 외부 캘린더·위젯·반복 일정, 제품 운영 기능 |
 
-웹·데스크탑, 외부 캘린더, 팀 협업, AI 추천, 자동 추적, 결제, Redis는 MVP 범위가 아니다.
+웹·데스크탑, 외부 캘린더, 팀 협업, AI 추천, 자동 추적, 결제, Redis는 MVP 범위가 아니다. 전체 기능의 단계별 분류와 완료 조건은 [MVP 및 출시 로드맵](planning/release-roadmap.md)을 따른다.
 
 iOS App Store 출시 전에는 Google·Kakao 로그인 구성으로 [Apple의 로그인 서비스 심사 지침 4.8](https://developer.apple.com/app-store/review/guidelines/)을 충족하는지 확인한다. 충족하지 못하면 Apple 로그인 또는 동등한 선택지를 출시 범위에 포함해야 한다.
 

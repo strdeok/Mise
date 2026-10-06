@@ -43,7 +43,7 @@ ID는 기능 명세, 계약, 인수 기준을 연결한다. 검증 위치의 `DB
 | STATS-04 | Break는 Focus와 별도 집계한다. | Server |
 | STATS-05 | 사용자·기간 범위로 집계하고 다른 사용자의 기록은 포함하지 않는다. | Server |
 | STATS-06 | 집계와 API는 정수 초를 사용하며 Session별 반올림을 하지 않는다. 수동 입력 세션은 최종 `durationSeconds`를 사용한다. App은 합산 후 표시만 반올림한다. | Server, App |
-| STATS-07 | hard delete된 Todo의 완료 Focus는 원래 Todo ID·시작 당시 제목과 삭제 직전 경로로 묶고 `isDeleted=true`로 반환한다. | Server |
+| STATS-07 | hard delete된 Todo의 완료 Focus 원본은 보존한다. 로컬 MVP-0에서는 삭제 시 `excludedFromStatsAt`을 기록해 Today Focus와 기본 통계에서 제외한다. 출시 단계의 서버 정책은 제품 결정을 다시 반영한다. | App, Server |
 | SETTINGS-01 | 사용자마다 Settings는 하나이고 가입 시 기본값을 만든다. | DB unique, Server |
 | SETTINGS-02 | 설정 변경은 새 세션부터 적용한다. | Server, App |
 | NOTIFY-01 | 알림 권한 거부는 세션 기록을 막지 않는다. | App |

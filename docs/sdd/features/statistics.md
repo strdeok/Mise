@@ -10,7 +10,7 @@
 
 ## 계산 규칙
 
-- 기본 통계에는 COMPLETED 세션만 포함한다. DISCARDED는 제외한다.
+- 기본 통계에는 COMPLETED 세션만 포함한다. DISCARDED와 삭제된 Todo에 연결돼 `excludedFromStatsAt`이 설정된 세션은 제외한다. 원본 세션은 로컬 데이터에 보존한다.
 - Todo 직접 시간은 해당 Todo의 Focus duration 합이다. 하위 합산은 자손 Todo의 직접 시간 합이며 중복 집계하지 않는다.
 - 블록 계획 시간은 현재 저장된 `endAt - startAt`이다. 블록을 나중에 수정하면 과거 기간의 계획 시간과 계획 대비 실제 비교도 최신 날짜·시간을 기준으로 다시 계산한다. 수정 전 계획의 스냅샷은 통계 기준으로 사용하지 않는다. 블록 실제 시간은 해당 `scheduleBlockId`로 완료된 Focus duration 합이며, Session 자체의 duration과 시작 날짜는 수정하지 않는다.
 - 삭제되지 않은 블록은 Focus 기록이 없어도 계획 시간에 포함한다. soft delete된 블록은 연결된 COMPLETED Focus의 확정 duration 합이 0초보다 클 때만 계획·실제 비교에 포함하고, 그때는 마지막으로 저장된 날짜·시간을 사용한다. RUNNING·PAUSED·DISCARDED Focus는 이 조건을 충족하지 않는다.
