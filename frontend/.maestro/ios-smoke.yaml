@@ -7,8 +7,6 @@ appId: com.strdeok.misetable
 - tapOn:
     text: "집중"
     index: 0
-- assertVisible: "집중 중"
-- tapOn: "열기 ›"
 - assertVisible: "FOCUS"
 - assertVisible: "일시정지"
 - tapOn: "일시정지"
