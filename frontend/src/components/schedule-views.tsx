@@ -20,6 +20,7 @@ LocaleConfig.defaultLocale = 'ko';
 type ScheduleView = 'month' | 'week' | 'day';
 const TIMELINE_HEIGHT = 24 * size.timelineHour;
 const WEEK_HOUR_WIDTH = 36;
+const MORNING_SCROLL = 7 * size.timelineHour - 16;
 const day = (key: string) => new Date(`${key}T12:00:00`);
 const changeDay = (key: string, amount: number) => {
   const value = day(key);
@@ -40,7 +41,7 @@ const startOfWeek = (key: string) => {
 };
 const weekKeys = (key: string) => Array.from({ length: 7 }, (_, index) => changeDay(startOfWeek(key), index));
 
-function TimetableBlock({ block, index, todoTitle, onEdit, onFocus, onDelete }: { block: ScheduleBlock; index: number; todoTitle: string; onEdit: () => void; onFocus: () => void; onDelete: () => void }) {
+function TimetableBlock({ block, todoTitle, onOpen }: { block: ScheduleBlock; todoTitle: string; onOpen: () => void }) {
   const saveBlock = useMiseStore((x) => x.saveBlock);
   const [dragging, setDragging] = useState(false);
   const [deltaY, setDeltaY] = useState(0);
@@ -49,7 +50,7 @@ function TimetableBlock({ block, index, todoTitle, onEdit, onFocus, onDelete }: 
   latestBlock.current = block;
   const duration = block.endMinute - block.startMinute;
   const proposedStart = Math.max(0, Math.min(1440 - duration, Math.round((block.startMinute + deltaY) / 5) * 5));
-  const blockHeight = Math.max(32, duration - 2);
+  const blockHeight = duration - 2;
   const responder = useRef(PanResponder.create({
     onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 5,
     onMoveShouldSetPanResponderCapture: (_, gesture) => Math.abs(gesture.dy) > 5,
@@ -65,10 +66,12 @@ function TimetableBlock({ block, index, todoTitle, onEdit, onFocus, onDelete }: 
     onPanResponderTerminate: () => { setDragging(false); setDeltaY(0); deltaRef.current = 0; },
   })).current;
   return <>
-    {dragging && <View pointerEvents="none" style={[styles.dropPreview, { top: proposedStart, height: blockHeight }]}><Text style={styles.dropPreviewText}>{formatClock(proposedStart)}에 놓기</Text></View>}
+    {dragging && <View pointerEvents="none" style={[styles.dropPreview, { top: proposedStart, height: blockHeight }]}>{blockHeight >= 20 && <Text style={styles.dropPreviewText}>{formatClock(proposedStart)}에 놓기</Text>}</View>}
     <View {...responder.panHandlers} style={[styles.timetableBlock, { top: block.startMinute, height: blockHeight, opacity: dragging ? 0.35 : 1, transform: [{ translateY: dragging ? deltaY : 0 }] }]}>
-      <View style={styles.blockBody}><Text numberOfLines={1} style={styles.timetableTitle}>{block.title}</Text><Text numberOfLines={1} style={styles.timetableMeta}>{formatClock(block.startMinute)}–{formatClock(block.endMinute)} · {todoTitle}</Text></View>
-      <View style={styles.blockActions}><Pressable onPress={onEdit}><Text style={styles.blockActionText}>수정</Text></Pressable><Pressable onPress={onFocus}><Text style={styles.blockActionText}>집중</Text></Pressable><Pressable onPress={onDelete}><Text style={styles.blockActionText}>삭제</Text></Pressable></View>
+      <Pressable onPress={onOpen} accessibilityLabel={`${block.title}, ${formatClock(block.startMinute)}부터 ${formatClock(block.endMinute)}까지. 일정 메뉴 열기`} style={[styles.blockTap, { paddingVertical: duration < 40 ? 1 : 4 }]}>
+        {duration >= 20 && <Text numberOfLines={1} style={styles.timetableTitle}>{block.title}</Text>}
+        {duration >= 40 && <Text numberOfLines={1} style={styles.timetableMeta}>{formatClock(block.startMinute)}–{formatClock(block.endMinute)} · {todoTitle}</Text>}
+      </Pressable>
     </View>
   </>;
 }
@@ -79,18 +82,21 @@ function DayTimeline({ selectedDate, blocks, addBlock }: { selectedDate: string;
   const remove = useMiseStore((x) => x.deleteBlock);
   const start = useMiseStore((x) => x.startSession);
   const [picker, setPicker] = useState<string | null>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const list = blocks.filter((block) => block.dateKey === selectedDate && !block.deletedAt).sort((a, b) => a.startMinute - b.startMinute);
+  const selectedBlock = list.find((block) => block.id === selectedBlockId);
   const availableTodos = todos.filter((todo) => !todo.archivedAt);
   const beginFocus = (block: ScheduleBlock) => block.todoId ? start('focus', block.todoId, block.id).then((id) => id && router.push('/timer')) : setPicker(block.id);
   const createAt = (positionY: number) => addBlock(selectedDate, undefined, Math.max(0, Math.min(1380, Math.round(positionY / 5) * 5)));
   return <>
-    <ScrollView ref={scrollRef} contentContainerStyle={styles.timelineScroll} onContentSizeChange={() => scrollRef.current?.scrollTo({ y: 7 * size.timelineHour, animated: false })}>
+    <ScrollView ref={scrollRef} contentContainerStyle={styles.timelineScroll} onContentSizeChange={() => scrollRef.current?.scrollTo({ y: MORNING_SCROLL, animated: false })}>
       <View style={[styles.timeline, { height: TIMELINE_HEIGHT }]}>
         {Array.from({ length: 25 }, (_, index) => <View key={index} style={[styles.hourLine, { top: index * size.timelineHour }]}><Text style={styles.hourLabel}>{String(index).padStart(2, '0')}:00</Text><View style={styles.hourRule} /></View>)}
         <Pressable style={styles.timelineTap} onPress={(event) => createAt(event.nativeEvent.locationY)} />
-        {list.map((block, index) => <TimetableBlock key={block.id} block={block} index={index} todoTitle={block.todoId ? todos.find((todo) => todo.id === block.todoId)?.title ?? '삭제된 Todo' : 'Todo 선택'} onEdit={() => addBlock(selectedDate, block)} onFocus={() => beginFocus(block)} onDelete={() => Alert.alert('일정 삭제', '삭제해도 연결된 완료 Focus 기록은 유지됩니다.', [{ text: '취소', style: 'cancel' }, { text: '삭제', style: 'destructive', onPress: () => remove(block.id) }])} />)}
+        {list.map((block) => <TimetableBlock key={block.id} block={block} todoTitle={block.todoId ? todos.find((todo) => todo.id === block.todoId)?.title ?? '삭제된 Todo' : 'Todo 선택'} onOpen={() => setSelectedBlockId(block.id)} />)}
       </View>
     </ScrollView>
+    <Modal visible={!!selectedBlock} transparent animationType="slide" onRequestClose={() => setSelectedBlockId(null)}><View style={styles.overlay}><Card style={styles.modal}><Label>일정</Label><Title>{selectedBlock?.title}</Title><Sub>{selectedBlock ? `${formatClock(selectedBlock.startMinute)}–${formatClock(selectedBlock.endMinute)}` : ''}</Sub><View style={styles.modalActions}><Button label="수정" tone="quiet" onPress={() => { if (!selectedBlock) return; setSelectedBlockId(null); addBlock(selectedDate, selectedBlock); }} /><Button label="집중 시작" onPress={() => { if (!selectedBlock) return; setSelectedBlockId(null); beginFocus(selectedBlock); }} /></View><Button label="삭제" tone="quiet" onPress={() => { if (!selectedBlock) return; const id = selectedBlock.id; setSelectedBlockId(null); Alert.alert('일정 삭제', '삭제해도 연결된 완료 Focus 기록은 유지됩니다.', [{ text: '취소', style: 'cancel' }, { text: '삭제', style: 'destructive', onPress: () => remove(id) }]); }} /><Button label="닫기" tone="quiet" onPress={() => setSelectedBlockId(null)} /></Card></View></Modal>
     <Modal visible={!!picker} transparent animationType="slide" onRequestClose={() => setPicker(null)}><View style={styles.overlay}><Card style={styles.modal}><Title>Todo 선택</Title>{availableTodos.map((todo) => <Button key={todo.id} label={todo.title} tone="quiet" onPress={() => picker && start('focus', todo.id, picker).then((id) => { setPicker(null); if (id) router.push('/timer'); })} />)}{!availableTodos.length && <Sub>먼저 Todo를 추가해 주세요.</Sub>}<Button label="취소" tone="quiet" onPress={() => setPicker(null)} /></Card></View></Modal>
   </>;
 }
@@ -110,7 +116,7 @@ function WeekView({ selectedDate, blocks, onSelect }: { selectedDate: string; bl
   const dayWidth = Math.max(1, (width - WEEK_HOUR_WIDTH) / 7);
   return <View style={styles.weekGrid}>
     <View style={styles.weekHeader}><View style={{ width: WEEK_HOUR_WIDTH }} />{keys.map((key, index) => <Pressable key={key} onPress={() => onSelect(key)} style={[styles.weekDayHead, { width: dayWidth }, key === selectedDate && styles.weekDayHeadSelected]}><Text style={[styles.weekDayText, key === selectedDate && styles.weekDayTextSelected]}>{['월', '화', '수', '목', '금', '토', '일'][index]}</Text><Text style={[styles.weekDateText, key === selectedDate && styles.weekDayTextSelected]}>{day(key).getDate()}</Text></Pressable>)}</View>
-    <ScrollView ref={scrollRef} contentContainerStyle={styles.weekScroll} onContentSizeChange={() => scrollRef.current?.scrollTo({ y: 7 * size.timelineHour, animated: false })}>
+    <ScrollView ref={scrollRef} contentContainerStyle={styles.weekScroll} onContentSizeChange={() => scrollRef.current?.scrollTo({ y: MORNING_SCROLL, animated: false })}>
       <View style={styles.weekBody}>
         {keys.map((key, index) => <View key={key} style={[styles.weekColumn, { left: WEEK_HOUR_WIDTH + index * dayWidth, width: dayWidth }]} />)}
         {Array.from({ length: 25 }, (_, index) => <View key={index} style={[styles.weekHourLine, { top: index * size.timelineHour, left: WEEK_HOUR_WIDTH }]}><Text style={[styles.weekHourLabel, { width: WEEK_HOUR_WIDTH }]}>{String(index).padStart(2, '0')}</Text></View>)}
@@ -174,12 +180,11 @@ const styles = StyleSheet.create({
   hourLabel: { position: 'absolute', right: '100%', width: 53, textAlign: 'right', paddingRight: space[2], top: -8, fontSize: font.xs, fontWeight: '500', color: palette.muted },
   hourRule: { height: 1, backgroundColor: palette.line, flex: 1 },
   timelineTap: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-  timetableBlock: { position: 'absolute', left: space[1], right: 7, borderLeftWidth: 3, borderColor: palette.ink, backgroundColor: palette.greenSoft, paddingHorizontal: 9, paddingVertical: 7, overflow: 'hidden', zIndex: 2 },
-  blockBody: { flex: 1 },
+  timetableBlock: { position: 'absolute', left: space[1], right: 7, borderLeftWidth: 3, borderColor: palette.ink, backgroundColor: palette.greenSoft, paddingHorizontal: 9, overflow: 'hidden', zIndex: 2 },
+  blockTap: { flex: 1, justifyContent: 'center' },
   timetableTitle: { fontSize: 13, fontWeight: '600', color: palette.ink },
   timetableMeta: { fontSize: 10, color: palette.muted, marginTop: 2 },
-  blockActions: { flexDirection: 'row', gap: space[3], justifyContent: 'flex-end' },
-  blockActionText: { fontSize: 11, fontWeight: '600', color: palette.ink },
+  modalActions: { flexDirection: 'row', gap: space[2] },
   dropPreview: { position: 'absolute', left: space[1], right: 7, borderWidth: 2, borderStyle: 'dashed', borderColor: '#777', backgroundColor: '#D8D8D8', paddingHorizontal: 9, paddingVertical: 7, zIndex: 1, justifyContent: 'center' },
   dropPreviewText: { color: '#444', fontSize: font.xs, fontWeight: '700' },
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#0008', padding: space[4] },
