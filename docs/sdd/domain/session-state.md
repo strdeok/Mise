@@ -1,16 +1,19 @@
 # Session 상태 전이
 
-`idle`은 DB 상태가 아니라 활성 Session이 없는 App 상태다. 종류는 `FOCUS`, `SHORT_BREAK`, `LONG_BREAK`이며 상태는 `RUNNING`, `PAUSED`, `COMPLETED`, `DISCARDED`다. 로컬 프로토타입은 기기 저장소, 서버 단계에서는 서버가 전이와 경과 시간의 최종 기준이다. `RUNNING`과 `PAUSED`를 합쳐 활성 Session은 최대 하나다.
+`idle`은 DB 상태가 아니라 활성 Session이 없는 App 상태다. 종류는 `FOCUS`, `SHORT_BREAK`, `LONG_BREAK`이며 MVP-0의 상태는 `READY`, `RUNNING`, `PAUSED`, `COMPLETED`, `DISCARDED`다. 로컬 프로토타입은 기기 저장소, 서버 단계에서는 서버가 전이와 경과 시간의 최종 기준이다. `READY`·`RUNNING`·`PAUSED`를 합쳐 활성 Session은 최대 하나다.
+
+`READY`는 타이머 화면을 열었지만 아직 시간을 재지 않은 상태다. `startedAt`과 `lastResumedAt`은 null, 경과 시간은 0초다. `시작`을 눌렀을 때만 `RUNNING`으로 전이하며 실제 시작 시각·날짜·시간대를 기록하고 목표 알림을 예약한다. `READY`에서는 완료·일시정지를 할 수 없고, 폐기할 수 있다. 앱을 다시 열어도 시작 전 상태를 복원한다.
 
 ## 전이표
 
 | 요청 | 이전 → 이후 | 서버 필드 변경 | App 알림 |
 | --- | --- | --- | --- |
-| 시작 | 없음 → RUNNING | type, targetSeconds, startedAt, accumulatedSeconds=0, 참조 ID | 목표 시각 예약 |
-| Pause | RUNNING → PAUSED | `accumulatedSeconds += now - startedAt`, pausedAt, status | 기존 예약 취소 |
-| Resume | PAUSED → RUNNING | startedAt=now, status | 남은 시간으로 다시 예약 |
+| 타이머 준비 | 없음 → READY | type, targetSeconds, accumulatedSeconds=0, 참조 ID | 없음 |
+| 시작 | READY → RUNNING | startedAt=now, lastResumedAt=now, 날짜·시간대, status | 목표 시각 예약 |
+| Pause | RUNNING → PAUSED | `accumulatedSeconds += now - lastResumedAt`, lastResumedAt=null, status | 기존 예약 취소 |
+| Resume | PAUSED → RUNNING | lastResumedAt=now, status | 남은 시간으로 다시 예약 |
 | Complete | RUNNING/PAUSED → COMPLETED | `completionMode=ACTUAL`이면 실제 경과, `TARGET`이면 목표 시간, `MANUAL`이면 사용자 입력 시간으로 durationSeconds 확정; 원래 계산 시간도 보존, endedAt, status | 기존 예약 취소 |
-| Discard | RUNNING/PAUSED → DISCARDED | discardedAt, status | 기존 예약 취소 |
+| Discard | READY/RUNNING/PAUSED → DISCARDED | discardedAt, status | 기존 예약 취소 |
 
 목표 시각이 지나도 세션 상태는 RUNNING이다. 사용자가 `목표 시간만 저장`을 선택하면 `completionMode=TARGET`으로 Complete한다. `계속 기록`을 선택하면 상태는 RUNNING으로 두고 선택 시각을 서버에 기록한다. 앱을 다시 열어도 계속 기록 선택을 복원한다. 사용자가 이후 Complete하면 실제 경과 시간을 저장한다. `TARGET` 완료 시 서버는 목표 도달 시각을 기준으로 `endedAt`을 확정한다.
 

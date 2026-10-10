@@ -1,6 +1,6 @@
 export type TodoStatus = 'open' | 'completed';
 export type SessionType = 'focus' | 'short_break' | 'long_break';
-export type SessionStatus = 'running' | 'paused' | 'completed' | 'discarded';
+export type SessionStatus = 'ready' | 'running' | 'paused' | 'completed' | 'discarded';
 export type CompletionMode = 'actual' | 'target' | 'manual';
 
 export type Todo = {
@@ -40,7 +40,7 @@ export type Session = {
   targetSeconds: number;
   accumulatedSeconds: number;
   lastResumedAt: number | null;
-  startedAt: number;
+  startedAt: number | null;
   completedAt: number | null;
   measuredSeconds: number | null;
   recordedSeconds: number | null;

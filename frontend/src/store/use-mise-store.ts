@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { activeSession, dateKey, descendants, elapsedSeconds, scheduleError, todoDepth, todoPath, timezoneId, utcOffsetMinutes } from '@/domain/logic';
+import { activeSession, beginReadySession, dateKey, descendants, elapsedSeconds, scheduleError, todoDepth, todoPath, timezoneId, utcOffsetMinutes } from '@/domain/logic';
 import { localRepository } from '@/data/repository';
 import type { AppData, CompletionMode, ScheduleBlock, Session, SessionType, Settings, Todo } from '@/domain/types';
 
@@ -11,7 +11,8 @@ type MiseStore = AppData & {
   toggleTodo: (id: string) => Promise<void>; toggleToday: (id: string, key: string) => Promise<void>; deleteTodo: (id: string) => Promise<boolean>;
   saveBlock: (input: Omit<ScheduleBlock, 'id' | 'deletedAt'> & { id?: string }) => Promise<string | null>;
   deleteBlock: (id: string) => Promise<void>;
-  startSession: (type: SessionType, todoId?: string | null, scheduleBlockId?: string | null) => Promise<string | null>;
+  prepareSession: (type: SessionType, todoId?: string | null, scheduleBlockId?: string | null) => Promise<string | null>;
+  beginSession: () => Promise<void>;
   pause: () => Promise<void>; resume: () => Promise<void>; continuePastTarget: () => Promise<void>; complete: (mode: CompletionMode, manualSeconds?: number) => Promise<void>; discard: () => Promise<void>;
   updateSettings: (settings: Partial<Settings>) => Promise<void>;
 };
@@ -63,23 +64,24 @@ export const useMiseStore = create<MiseStore>((set, get) => {
       const sessions = state.sessions.map((session) => session.scheduleBlockId === blockId && session.status === 'completed' && (session.recordedSeconds ?? 0) > 0 ? { ...session, scheduleSnapshot: snapshot } : session);
       await save({ ...state, blocks: state.blocks.map((value) => value.id === blockId ? { ...value, deletedAt: Date.now() } : value), sessions });
     },
-    startSession: async (type, todoId = null, scheduleBlockId = null) => {
+    prepareSession: async (type, todoId = null, scheduleBlockId = null) => {
       const state = get(); if (activeSession(state.sessions)) { set({ error: '이미 실행 중인 세션이 있습니다.' }); return null; }
       let blocks = state.blocks;
       const block = scheduleBlockId ? blocks.find((value) => value.id === scheduleBlockId && !value.deletedAt) : undefined;
       if (type === 'focus' && !todoId) { set({ error: 'Focus에는 Todo가 필요합니다.' }); return null; }
       if (block && !block.todoId && todoId) blocks = blocks.map((value) => value.id === block.id ? { ...value, todoId } : value);
       if (block?.todoId && todoId !== block.todoId) { set({ error: '블록에 연결된 Todo와 다릅니다.' }); return null; }
-      const now = Date.now(); const targetMinutes = type === 'focus' ? state.settings.defaultFocusMinutes : type === 'short_break' ? state.settings.shortBreakMinutes : state.settings.longBreakMinutes;
+      const targetMinutes = type === 'focus' ? state.settings.defaultFocusMinutes : type === 'short_break' ? state.settings.shortBreakMinutes : state.settings.longBreakMinutes;
       const todo = todoId ? state.todos.find((value) => value.id === todoId && !value.archivedAt) : undefined;
       if (type === 'focus' && !todo) { set({ error: 'Focus에 연결할 활성 Todo를 찾을 수 없습니다.' }); return null; }
-      const session: Session = { id: id(), type, status: 'running', todoId, scheduleBlockId, targetSeconds: targetMinutes * 60, accumulatedSeconds: 0, lastResumedAt: now, startedAt: now, completedAt: null, measuredSeconds: null, recordedSeconds: null, completionMode: null, targetReachedNotified: false, continuedPastTargetAt: null, localStartDate: dateKey(), timezoneId: timezoneId(), utcOffsetMinutes: utcOffsetMinutes(), todoSnapshot: todo ? { title: todo.title, path: todoPath(todo.id, state.todos) } : null, todoStatsPathSnapshot: null, scheduleSnapshot: null, excludedFromStatsAt: null };
+      const session: Session = { id: id(), type, status: 'ready', todoId, scheduleBlockId, targetSeconds: targetMinutes * 60, accumulatedSeconds: 0, lastResumedAt: null, startedAt: null, completedAt: null, measuredSeconds: null, recordedSeconds: null, completionMode: null, targetReachedNotified: false, continuedPastTargetAt: null, localStartDate: dateKey(), timezoneId: timezoneId(), utcOffsetMinutes: utcOffsetMinutes(), todoSnapshot: todo ? { title: todo.title, path: todoPath(todo.id, state.todos) } : null, todoStatsPathSnapshot: null, scheduleSnapshot: null, excludedFromStatsAt: null };
       await save({ ...state, blocks, sessions: [...state.sessions, session] }); return session.id;
     },
+    beginSession: async () => { const state = get(); const current = activeSession(state.sessions); if (!current || current.status !== 'ready') return; const now = Date.now(); const location = { dateKey: dateKey(new Date(now)), timezoneId: timezoneId(), utcOffsetMinutes: utcOffsetMinutes(new Date(now)) }; await save({ ...state, sessions: state.sessions.map((session) => session.id === current.id ? beginReadySession(session, now, location) : session) }); },
     pause: async () => { const state = get(); const current = activeSession(state.sessions); if (!current || current.status !== 'running') return; const now = Date.now(); const seconds = elapsedSeconds(current, now); await save({ ...state, sessions: state.sessions.map((session) => session.id === current.id ? { ...session, status: 'paused', accumulatedSeconds: seconds, lastResumedAt: null } : session) }); },
     resume: async () => { const state = get(); const current = activeSession(state.sessions); if (!current || current.status !== 'paused') return; await save({ ...state, sessions: state.sessions.map((session) => session.id === current.id ? { ...session, status: 'running', lastResumedAt: Date.now() } : session) }); },
     continuePastTarget: async () => { const state = get(); const current = activeSession(state.sessions); if (!current || elapsedSeconds(current) < current.targetSeconds || current.continuedPastTargetAt) return; await save({ ...state, sessions: state.sessions.map((session) => session.id === current.id ? { ...session, continuedPastTargetAt: Date.now() } : session) }); },
-    complete: async (mode, manualSeconds) => { const state = get(); const current = activeSession(state.sessions); if (!current) return; const now = Date.now(); const measured = elapsedSeconds(current, now); const recorded = mode === 'target' ? current.targetSeconds : mode === 'manual' ? Math.max(60, Math.min(86400, manualSeconds ?? measured)) : measured; await save({ ...state, sessions: state.sessions.map((session) => session.id === current.id ? { ...session, status: 'completed', accumulatedSeconds: measured, lastResumedAt: null, completedAt: now, measuredSeconds: measured, recordedSeconds: recorded, completionMode: mode } : session) }); },
+    complete: async (mode, manualSeconds) => { const state = get(); const current = activeSession(state.sessions); if (!current || current.status === 'ready') return; const now = Date.now(); const measured = elapsedSeconds(current, now); const recorded = mode === 'target' ? current.targetSeconds : mode === 'manual' ? Math.max(60, Math.min(86400, manualSeconds ?? measured)) : measured; await save({ ...state, sessions: state.sessions.map((session) => session.id === current.id ? { ...session, status: 'completed', accumulatedSeconds: measured, lastResumedAt: null, completedAt: now, measuredSeconds: measured, recordedSeconds: recorded, completionMode: mode } : session) }); },
     discard: async () => { const state = get(); const current = activeSession(state.sessions); if (!current) return; await save({ ...state, sessions: state.sessions.map((session) => session.id === current.id ? { ...session, status: 'discarded', lastResumedAt: null, completedAt: Date.now() } : session) }); },
     updateSettings: async (patch) => { const state = get(); await save({ ...state, settings: { ...state.settings, ...patch } }); },
   };

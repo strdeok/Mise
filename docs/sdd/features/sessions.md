@@ -8,11 +8,13 @@ Today의 Todo, Todo 상세, Schedule Block에서 Focus를 시작한다. Focus는
 
 Todo가 연결되지 않은 Schedule Block에서 Focus를 시작할 때는 App이 Todo 선택을 요청한다. 선택이 완료되면 서버가 해당 블록에 Todo를 연결하고 Session을 생성한다. 사용자가 선택을 취소하면 블록과 Session을 변경하지 않는다.
 
-Timer는 종류, Todo, 목표 시간, 남은·경과 시간, 상태와 Pause/Resume/Complete/Discard를 표시한다. 실행 중 세션은 전역 미니 타이머에서도 보인다.
+Timer는 종류, Todo, 목표 시간, 남은·경과 시간, 상태와 Start/Pause/Resume/Complete/Discard를 표시한다. Timer 화면 진입만으로 시간이 흐르지 않으며 `시작`을 눌러야 측정과 알림이 시작된다. 준비 중 세션은 전역 미니 타이머에서 `시작 전`으로 표시한다.
+
+아날로그 시계 안에는 디지털 시간을 겹쳐 놓지 않는다. 큰 숫자는 시계 아래에 두고, `전체화면`을 누르면 작업 설명을 숨긴 채 정사각형 시계 패널을 화면 너비에 맞춰 확대한다. 전체화면에서도 시작·일시정지·재개와 축소가 가능하다.
 
 ## 정상·예외 흐름
 
-- 한 사용자에게 RUNNING 또는 PAUSED 세션은 최대 하나다. 다른 요청 ID의 중복 시작은 서버와 DB에서 막고 `409 ACTIVE_SESSION_EXISTS`를 반환한다. App은 활성 세션을 다시 조회한다.
+- 한 사용자에게 READY, RUNNING 또는 PAUSED 세션은 최대 하나다. 다른 요청 ID의 중복 시작은 서버와 DB에서 막고 `409 ACTIVE_SESSION_EXISTS`를 반환한다. App은 활성 세션을 다시 조회한다.
 - App은 시작·Pause·Resume·Complete·Discard 버튼 조작마다 `clientRequestId`를 만들고 같은 조작의 재전송에는 같은 ID를 사용한다. 서버는 같은 ID를 한 번만 적용하고 기존 결과를 반환한다. 다른 시작 요청이 활성 세션과 겹치면 `409 ACTIVE_SESSION_EXISTS`를 반환하고 App은 활성 세션을 다시 조회한다.
 - Pause 동안 기록 시간이 증가하지 않는다. Resume 시 누적 시간에서 이어진다.
 - 목표 전 종료도 지금까지의 시간을 COMPLETED로 저장할 수 있다. 1분 미만은 저장 전 확인을 제공할 수 있다. 저장하지 않으면 Discard한다.

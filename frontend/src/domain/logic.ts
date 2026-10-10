@@ -1,12 +1,14 @@
 import type { ScheduleBlock, Session, Todo } from './types';
 
 export const DAY_MINUTES = 24 * 60;
-export const activeSession = (sessions: Session[]) => sessions.find((s) => s.status === 'running' || s.status === 'paused') ?? null;
+export const activeSession = (sessions: Session[]) => sessions.find((s) => s.status === 'ready' || s.status === 'running' || s.status === 'paused') ?? null;
 export const dateKey = (date = new Date()) => date.toLocaleDateString('en-CA');
 export const timezoneId = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 export const utcOffsetMinutes = (date = new Date()) => -date.getTimezoneOffset();
 export const elapsedSeconds = (session: Session, now = Date.now()) =>
   session.accumulatedSeconds + (session.status === 'running' && session.lastResumedAt ? Math.max(0, Math.floor((now - session.lastResumedAt) / 1000)) : 0);
+export const beginReadySession = (session: Session, now: number, location: { dateKey: string; timezoneId: string; utcOffsetMinutes: number }): Session =>
+  session.status === 'ready' ? { ...session, status: 'running', startedAt: now, lastResumedAt: now, localStartDate: location.dateKey, timezoneId: location.timezoneId, utcOffsetMinutes: location.utcOffsetMinutes } : session;
 export const formatDuration = (seconds: number) => {
   if (seconds < 60) return '1분 미만';
   const hours = Math.floor(seconds / 3600);

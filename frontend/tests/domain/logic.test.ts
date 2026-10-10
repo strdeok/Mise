@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeSession, elapsedSeconds, scheduleError, todoDepth, todoPath } from '@/domain/logic';
+import { activeSession, beginReadySession, elapsedSeconds, scheduleError, todoDepth, todoPath } from '@/domain/logic';
 import type { ScheduleBlock, Session, Todo } from '@/domain/types';
 
 const todos: Todo[] = [
@@ -31,5 +31,16 @@ describe('Todo·Session 도메인 규칙', () => {
   it('running 세션의 경과 시간과 paused 세션의 단일 활성 상태를 계산한다', () => {
     expect(elapsedSeconds(session(), 11_900)).toBe(130);
     expect(activeSession([session({ status: 'completed' }), session({ id: 'paused', status: 'paused', lastResumedAt: null })])?.id).toBe('paused');
+  });
+
+  it('준비 상태에서는 시간이 흐르지 않고 시작 버튼 시각을 기록한다', () => {
+    const ready = session({ status: 'ready', accumulatedSeconds: 0, startedAt: null, lastResumedAt: null });
+    expect(activeSession([ready])?.id).toBe('s');
+    expect(elapsedSeconds(ready, 50_000)).toBe(0);
+    const running = beginReadySession(ready, 50_000, { dateKey: '2026-10-11', timezoneId: 'Asia/Seoul', utcOffsetMinutes: 540 });
+    expect(running.status).toBe('running');
+    expect(running.startedAt).toBe(50_000);
+    expect(running.localStartDate).toBe('2026-10-11');
+    expect(elapsedSeconds(running, 55_000)).toBe(5);
   });
 });

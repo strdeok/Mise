@@ -80,7 +80,7 @@ function DayTimeline({ selectedDate, blocks, addBlock }: { selectedDate: string;
   const scrollRef = useRef<ScrollView>(null);
   const todos = useMiseStore((x) => x.todos);
   const remove = useMiseStore((x) => x.deleteBlock);
-  const start = useMiseStore((x) => x.startSession);
+  const start = useMiseStore((x) => x.prepareSession);
   const [picker, setPicker] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const list = blocks.filter((block) => block.dateKey === selectedDate && !block.deletedAt).sort((a, b) => a.startMinute - b.startMinute);
