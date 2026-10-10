@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 import { router } from 'expo-router';
 import { activeSession, elapsedSeconds, formatDuration } from '@/domain/logic';
 import type { CompletionMode, SessionType } from '@/domain/types';
 import { useMiseStore } from '@/store/use-mise-store';
 import { Button, Card, Field, Label, palette, Sub, Title } from '@/components/mise-ui';
+import { SafeAreaSheet } from '@/components/safe-area-sheet';
 import { clearSessionNotification, scheduleSessionNotification } from '@/notifications/local-notifications';
 
 const SIZE = 310;
@@ -49,8 +51,9 @@ const timeText = (seconds: number) => `${String(Math.floor(seconds / 60)).padSta
 
 export default function Timer() {
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const dialSize = Math.min(width - 72, Math.max(220, height * 0.38), SIZE);
-  const fullSquare = Math.max(220, Math.min(width - 16, height - 300));
+  const fullSquare = Math.max(220, Math.min(width - 16, height - insets.top - insets.bottom - 300));
   const sessions = useMiseStore((x) => x.sessions);
   const settings = useMiseStore((x) => x.settings);
   const prepare = useMiseStore((x) => x.prepareSession);
@@ -139,7 +142,7 @@ export default function Timer() {
     {reached && session.continuedPastTargetAt && <Sub>목표 시간을 넘겨 계속 기록 중입니다.</Sub>}
     <View style={s.actions}><View style={s.control}>{primaryControl}</View>{session.status !== 'ready' && <View style={s.control}><Button label="완료" onPress={confirmComplete} /></View>}</View>
     <View style={s.utility}>{session.status !== 'ready' && <Pressable onPress={() => { setMinutes(String(Math.max(1, Math.round(elapsed / 60)))); setManual(true); }}><Text style={s.utilityText}>시간 직접 수정</Text></Pressable>}<Pressable onPress={confirmDiscard}><Text style={s.utilityText}>{session.status === 'ready' ? '취소' : '폐기'}</Text></Pressable></View>
-    <Modal visible={manual} transparent animationType="slide"><View style={s.overlay}><Card style={s.modal}><Title>실제 기록 시간</Title><Sub>측정 시간은 {formatDuration(elapsed)}입니다. 1분에서 24시간 사이로 수정할 수 있어요.</Sub><Field value={minutes} onChangeText={setMinutes} placeholder="분" /><View style={s.actions}><Button label="취소" tone="quiet" onPress={() => setManual(false)} /><Button label="저장" onPress={() => { const value = Number(minutes); if (!Number.isFinite(value) || value < 1 || value > 1440) return; setManual(false); finish('manual', Math.round(value) * 60); }} /></View></Card></View></Modal>
+    <Modal visible={manual} transparent animationType="slide" onRequestClose={() => setManual(false)}><SafeAreaSheet><Card style={s.modal}><Title>실제 기록 시간</Title><Sub>측정 시간은 {formatDuration(elapsed)}입니다. 1분에서 24시간 사이로 수정할 수 있어요.</Sub><Field value={minutes} onChangeText={setMinutes} placeholder="분" /><View style={s.actions}><Button label="취소" tone="quiet" onPress={() => setManual(false)} /><Button label="저장" onPress={() => { const value = Number(minutes); if (!Number.isFinite(value) || value < 1 || value > 1440) return; setManual(false); finish('manual', Math.round(value) * 60); }} /></View></Card></SafeAreaSheet></Modal>
   </ScrollView></SafeAreaView>;
 }
 
@@ -165,7 +168,6 @@ const s = StyleSheet.create({
   utility: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 8 },
   utilityText: { color: palette.muted, fontSize: 13, fontWeight: '600', paddingVertical: 8 },
   reached: { gap: 9 },
-  overlay: { flex: 1, justifyContent: 'flex-end', padding: 16, backgroundColor: '#0008' },
   modal: { gap: 14 },
   fullWrap: { flexGrow: 1, paddingHorizontal: 8, paddingTop: 8, paddingBottom: 20, gap: 12 },
   fullTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12 },

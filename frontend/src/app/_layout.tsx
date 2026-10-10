@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Notifications from 'expo-notifications';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
   useEffect(() => {
@@ -12,5 +13,5 @@ export default function RootLayout() {
     const subscription = Notifications.addNotificationResponseReceivedListener(openTimer);
     return () => subscription.remove();
   }, []);
-  return <><StatusBar style="dark" /><Stack screenOptions={{ headerShown: false, animation: 'fade' }}><Stack.Screen name="index" /><Stack.Screen name="timer" options={{ presentation: 'modal' }} /></Stack></>;
+  return <SafeAreaProvider><StatusBar style="dark" /><Stack screenOptions={{ headerShown: false, animation: 'fade' }}><Stack.Screen name="index" /><Stack.Screen name="timer" options={{ presentation: 'modal' }} /></Stack></SafeAreaProvider>;
 }

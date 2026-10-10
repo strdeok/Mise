@@ -6,6 +6,7 @@ import { dateKey, formatClock } from '@/domain/logic';
 import type { ScheduleBlock } from '@/domain/types';
 import { useMiseStore } from '@/store/use-mise-store';
 import { Button, Card, Label, palette, Sub, Title } from '@/components/mise-ui';
+import { SafeAreaSheet } from '@/components/safe-area-sheet';
 import { font, pageGutter, radius, size, space } from '@/constants/layout';
 
 LocaleConfig.locales.ko = {
@@ -96,8 +97,8 @@ function DayTimeline({ selectedDate, blocks, addBlock }: { selectedDate: string;
         {list.map((block) => <TimetableBlock key={block.id} block={block} todoTitle={block.todoId ? todos.find((todo) => todo.id === block.todoId)?.title ?? '삭제된 Todo' : 'Todo 선택'} onOpen={() => setSelectedBlockId(block.id)} />)}
       </View>
     </ScrollView>
-    <Modal visible={!!selectedBlock} transparent animationType="slide" onRequestClose={() => setSelectedBlockId(null)}><View style={styles.overlay}><Card style={styles.modal}><Label>일정</Label><Title>{selectedBlock?.title}</Title><Sub>{selectedBlock ? `${formatClock(selectedBlock.startMinute)}–${formatClock(selectedBlock.endMinute)}` : ''}</Sub><View style={styles.modalActions}><Button label="수정" tone="quiet" onPress={() => { if (!selectedBlock) return; setSelectedBlockId(null); addBlock(selectedDate, selectedBlock); }} /><Button label="집중 시작" onPress={() => { if (!selectedBlock) return; setSelectedBlockId(null); beginFocus(selectedBlock); }} /></View><Button label="삭제" tone="quiet" onPress={() => { if (!selectedBlock) return; const id = selectedBlock.id; setSelectedBlockId(null); Alert.alert('일정 삭제', '삭제해도 연결된 완료 Focus 기록은 유지됩니다.', [{ text: '취소', style: 'cancel' }, { text: '삭제', style: 'destructive', onPress: () => remove(id) }]); }} /><Button label="닫기" tone="quiet" onPress={() => setSelectedBlockId(null)} /></Card></View></Modal>
-    <Modal visible={!!picker} transparent animationType="slide" onRequestClose={() => setPicker(null)}><View style={styles.overlay}><Card style={styles.modal}><Title>Todo 선택</Title>{availableTodos.map((todo) => <Button key={todo.id} label={todo.title} tone="quiet" onPress={() => picker && start('focus', todo.id, picker).then((id) => { setPicker(null); if (id) router.push('/timer'); })} />)}{!availableTodos.length && <Sub>먼저 Todo를 추가해 주세요.</Sub>}<Button label="취소" tone="quiet" onPress={() => setPicker(null)} /></Card></View></Modal>
+    <Modal visible={!!selectedBlock} transparent animationType="slide" onRequestClose={() => setSelectedBlockId(null)}><SafeAreaSheet><Card style={styles.modal}><Label>일정</Label><Title>{selectedBlock?.title}</Title><Sub>{selectedBlock ? `${formatClock(selectedBlock.startMinute)}–${formatClock(selectedBlock.endMinute)}` : ''}</Sub><View style={styles.modalActions}><Button label="수정" tone="quiet" onPress={() => { if (!selectedBlock) return; setSelectedBlockId(null); addBlock(selectedDate, selectedBlock); }} /><Button label="집중 시작" onPress={() => { if (!selectedBlock) return; setSelectedBlockId(null); beginFocus(selectedBlock); }} /></View><Button label="삭제" tone="quiet" onPress={() => { if (!selectedBlock) return; const id = selectedBlock.id; setSelectedBlockId(null); Alert.alert('일정 삭제', '삭제해도 연결된 완료 Focus 기록은 유지됩니다.', [{ text: '취소', style: 'cancel' }, { text: '삭제', style: 'destructive', onPress: () => remove(id) }]); }} /><Button label="닫기" tone="quiet" onPress={() => setSelectedBlockId(null)} /></Card></SafeAreaSheet></Modal>
+    <Modal visible={!!picker} transparent animationType="slide" onRequestClose={() => setPicker(null)}><SafeAreaSheet><Card style={styles.modal}><Title>Todo 선택</Title>{availableTodos.map((todo) => <Button key={todo.id} label={todo.title} tone="quiet" onPress={() => picker && start('focus', todo.id, picker).then((id) => { setPicker(null); if (id) router.push('/timer'); })} />)}{!availableTodos.length && <Sub>먼저 Todo를 추가해 주세요.</Sub>}<Button label="취소" tone="quiet" onPress={() => setPicker(null)} /></Card></SafeAreaSheet></Modal>
   </>;
 }
 
@@ -187,6 +188,5 @@ const styles = StyleSheet.create({
   modalActions: { flexDirection: 'row', gap: space[2] },
   dropPreview: { position: 'absolute', left: space[1], right: 7, borderWidth: 2, borderStyle: 'dashed', borderColor: '#777', backgroundColor: '#D8D8D8', paddingHorizontal: 9, paddingVertical: 7, zIndex: 1, justifyContent: 'center' },
   dropPreviewText: { color: '#444', fontSize: font.xs, fontWeight: '700' },
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#0008', padding: space[4] },
   modal: { gap: space[3] },
 });

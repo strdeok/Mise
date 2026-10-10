@@ -25,6 +25,7 @@ App은 DB에 직접 접근하지 않는다. 서버가 사용자 데이터의 기
 - Today와 Todo는 목록 중심으로 구성한다. 항목마다 카드를 두지 않고 구분선과 글자 굵기로 정보의 순서를 나타낸다. 오늘의 Focus 요약만 별도 패널로 강조한다.
 - Schedule은 날짜 이동과 월·주·일 전환을 한 줄에 배치하고, 주간 보기에서는 일곱 날짜 열을 동시에 표시한다. 일정 블록은 밝은 면과 검은 왼쪽 표시선으로 구별한다.
 - Timer는 아날로그 다이얼을 중심에 두고 디지털 시간을 다이얼 아래에 표시한다. 전체화면에서는 정사각형 시계 패널을 화면 너비에 맞게 확대한다. 시간 측정은 명시적인 시작 버튼을 누를 때 시작하며 일시정지·완료·폐기 조작은 작은 화면에서도 스크롤로 접근할 수 있어야 한다.
+- iOS 상태바·홈 인디케이터와 Android 상태바·제스처 바를 Safe Area로 처리한다. 탭, Timer 조작, 하단 모달은 시스템 바와 겹치지 않아야 하며, 전체화면 시계 크기는 Safe Area를 제외한 높이로 제한한다.
 - 스타일 참고: [Cal.com](https://styles.refero.design/style/5d7aa503-8cfa-49a4-bd3b-0c2f0f075c70), [Goodnotes](https://styles.refero.design/style/c7fe6b78-9ce3-4d69-a3f0-b8310c779e7a), [Teenage Engineering](https://styles.refero.design/style/aecf9dda-5cba-4dc7-9e73-59b65d895cdf). 이들은 시각 언어 참고이며 앱의 동작 계약은 각 기능 명세를 따른다.
 
 ## 범위
