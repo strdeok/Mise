@@ -19,6 +19,11 @@ Things, Structured, Todoist Quick Add, Session, Sunsama에서 확인한 모바�
 - `cd frontend && npx tsc --noEmit` 통과.
 - `cd frontend && npm test -- --run` 통과: 테스트 파일 4개, 테스트 12개.
 - `cd frontend && npx expo export --platform web` 통과. Expo Notifications의 웹 정적 렌더 경고는 남아 있지만 웹 번들은 정상 생성됐다.
+- iPhone 17 Pro Simulator에서 Expo Go로 Today 화면을 열었다. 이전 형식의 로컬 데이터가 있을 때 hydration 오류 안내가 표시되는 것을 발견했다.
+
+## 후속 수정
+
+- 로컬 저장 데이터를 읽거나 해석하지 못하면 손상된 값을 지우고 샘플 데이터로 시작하도록 Repository 복구 처리를 추가했다. 기존 유효 데이터는 그대로 유지한다.
 
 ## 남은 일
 

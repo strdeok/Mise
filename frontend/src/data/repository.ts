@@ -25,7 +25,15 @@ export const fixture = (): AppData => {
 };
 
 export const localRepository = {
-  async load(): Promise<AppData> { const raw = await AsyncStorage.getItem(key); return raw ? normalizeStoredData(JSON.parse(raw) as AppData) : fixture(); },
+  async load(): Promise<AppData> {
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      return raw ? normalizeStoredData(JSON.parse(raw) as AppData) : fixture();
+    } catch {
+      await AsyncStorage.removeItem(key).catch(() => undefined);
+      return fixture();
+    }
+  },
   async save(data: AppData) { await AsyncStorage.setItem(key, JSON.stringify(data)); },
   async reset() { const data = fixture(); await this.save(data); return data; },
 };
