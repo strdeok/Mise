@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Button, Card, Field, Label, palette, Sub, Title } from '@/components/mise-ui';
+import { Button, SheetCard, Field, Label, palette, Sub, Title } from '@/components/mise-ui';
 import { SafeAreaSheet } from '@/components/safe-area-sheet';
 import { font, radius, size, space } from '@/constants/layout';
 import type { TodoCategory } from '@/domain/types';
@@ -27,7 +27,11 @@ export function CategoryManagerSheet({ visible, close }: { visible: boolean; clo
     setSaving(true);
     try {
       const result = await saveCategory(name, editingId ?? undefined);
-      if (result) { setName(''); setEditingId(null); }
+      if (result) {
+        const wasEditing = !!editingId;
+        setName(''); setEditingId(null);
+        if (!wasEditing) close();
+      }
     } finally { setSaving(false); }
   };
   const confirmDelete = (category: TodoCategory) => {
@@ -42,7 +46,7 @@ export function CategoryManagerSheet({ visible, close }: { visible: boolean; clo
   };
 
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-    <SafeAreaSheet><Card style={styles.sheet}>
+    <SafeAreaSheet><SheetCard style={styles.sheet}>
       <View style={styles.heading}><Title>카테고리 관리</Title><Pressable onPress={close} accessibilityRole="button" accessibilityLabel="닫기" style={styles.close}><Text style={styles.closeText}>×</Text></Pressable></View>
       <Sub>Todo와 별개로 관리합니다. 카테고리 없이도 Todo를 만들 수 있어요.</Sub>
       <Label>{editingId ? '이름 변경' : '새 카테고리'}</Label>
@@ -60,7 +64,7 @@ export function CategoryManagerSheet({ visible, close }: { visible: boolean; clo
           </View>
         </View>) : <Sub>등록된 카테고리가 없습니다.</Sub>}
       </View>
-    </Card></SafeAreaSheet>
+    </SheetCard></SafeAreaSheet>
   </Modal>;
 }
 

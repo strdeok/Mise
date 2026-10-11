@@ -6,6 +6,7 @@ import { MotionPressable } from '@/components/motion';
 // Mise의 주방 도구처럼 선명한 대비를 위해 색 역할을 무채색으로 제한한다.
 export const palette = { bg: '#FAFAF9', card: '#FFFFFF', ink: '#111111', muted: '#686868', line: '#E4E4E2', green: '#111111', greenSoft: '#F0F0EE', orange: '#3D3D3D', red: '#2A2A2A' };
 export function Card({ children, style }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) { return <View style={[styles.card, style]}>{children}</View>; }
+export function SheetCard({ children, style }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) { return <View style={[styles.card, style, styles.sheet]}>{children}</View>; }
 export function Button({ label, onPress, tone = 'primary', disabled = false }: { label: string; onPress: () => void; tone?: 'primary' | 'quiet' | 'danger'; disabled?: boolean }) { return <MotionPressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress} style={[styles.button, tone === 'quiet' && styles.quiet, tone === 'danger' && styles.danger, disabled && styles.disabled]}><Text style={[styles.buttonText, tone === 'quiet' && styles.quietText]}>{label}</Text></MotionPressable>; }
 export function Field({ value, onChangeText, placeholder }: { value: string; onChangeText: (value: string) => void; placeholder: string }) { return <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#8A8A8A" style={styles.field} />; }
 export const Label = ({ children }: PropsWithChildren) => <Text style={styles.label}>{children}</Text>;
@@ -13,6 +14,7 @@ export const Title = ({ children }: PropsWithChildren) => <Text style={styles.ti
 export const Sub = ({ children }: PropsWithChildren) => <Text style={styles.sub}>{children}</Text>;
 const styles = StyleSheet.create({
   card: { backgroundColor: palette.card, borderRadius: radius.sm, padding: space[4], borderWidth: 1, borderColor: palette.line, gap: space[2] },
+  sheet: { borderRadius: 28, borderWidth: 0, padding: 20, width: '100%', maxWidth: 600, alignSelf: 'center', shadowColor: '#000', shadowOpacity: .12, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   button: { minHeight: size.touch, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space[3], backgroundColor: palette.green },
   quiet: { backgroundColor: palette.greenSoft }, danger: { backgroundColor: palette.red }, disabled: { opacity: 0.45 },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: font.md }, quietText: { color: palette.green },

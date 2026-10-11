@@ -19,13 +19,13 @@ function TabIcon({ id, selected }: { id: Tab; selected: boolean }) {
   return <Svg width={23} height={23} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
     {id === 'today' && (selected
       ? <><Path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" fill={color} /><Path d="M9.5 21v-7h5v7" fill={palette.card} stroke={palette.card} /></>
-      : <><Path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" /><Path d="M9 21v-7h6v7" /></>)}
+      : <><Path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" fill="none" /><Path d="M9 21v-7h6v7" fill="none" /></>)}
     {id === 'todos' && (selected
       ? <><Rect x="3.5" y="3.5" width="17" height="17" rx="2.5" fill={color} /><Path d="m7.5 12 3 3 6-6" stroke={palette.card} strokeWidth={2.1} /></>
-      : <><Rect x="3.5" y="3.5" width="17" height="17" rx="2.5" /><Path d="m7.5 12 3 3 6-6" /></>)}
+      : <><Rect x="3.5" y="3.5" width="17" height="17" rx="2.5" fill="none" /><Path d="m7.5 12 3 3 6-6" fill="none" /></>)}
     {id === 'schedule' && (selected
       ? <><Rect x="3" y="5" width="18" height="16" rx="2" fill={color} /><Path d="M3 10h18" stroke={palette.card} /><Path d="M8 3v4M16 3v4" /><Rect x="7" y="13" width="3" height="3" rx="0.5" fill={palette.card} stroke="none" /></>
-      : <><Rect x="3" y="5" width="18" height="16" rx="2" /><Path d="M3 10h18M8 3v4M16 3v4" /></>)}
+      : <><Rect x="3" y="5" width="18" height="16" rx="2" fill="none" /><Path d="M3 10h18M8 3v4M16 3v4" fill="none" /></>)}
     {id === 'stats' && (selected
       ? <><Rect x="4.5" y="13" width="3.5" height="6" rx="0.5" fill={color} stroke="none" /><Rect x="10.25" y="7" width="3.5" height="12" rx="0.5" fill={color} stroke="none" /><Rect x="16" y="10" width="3.5" height="9" rx="0.5" fill={color} stroke="none" /><Path d="M3 21h18" /></>
       : <Path d="M3 21h18M5 18v-5h3v5M10.5 18V7h3v11M16 18v-8h3v8" />)}
@@ -49,7 +49,7 @@ export function BottomTabs({ value, onChange }: { value: Tab; onChange: (tab: Ta
 
 const styles = StyleSheet.create({
   bar: { height: size.tabBar, borderTopWidth: 1, borderColor: palette.line, backgroundColor: palette.card, flexDirection: 'row' },
-  tab: { flex: 1, minHeight: size.touch, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  tab: { flex: 1, minWidth: 0, minHeight: size.touch, alignItems: 'center', justifyContent: 'center', gap: 3 },
   label: { color: palette.muted, fontWeight: '500', fontSize: font.xs },
   selected: { color: palette.ink, fontWeight: '700' },
 });

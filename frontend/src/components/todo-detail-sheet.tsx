@@ -1,6 +1,7 @@
+import { Chevron } from '@/components/chevron';
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Button, Card, Field, Label, palette, Sub, Title } from '@/components/mise-ui';
+import { Button, SheetCard, Field, Label, palette, Sub, Title } from '@/components/mise-ui';
 import { SafeAreaSheet } from '@/components/safe-area-sheet';
 import { todoPath } from '@/domain/logic';
 import type { Todo } from '@/domain/types';
@@ -37,7 +38,7 @@ export function TodoDetailSheet({ todoId, onSelect, onEdit, onClose }: {
 
   return <Modal visible={!!todo} transparent animationType="slide" onRequestClose={onClose}>
     <SafeAreaSheet>
-      <Card style={styles.sheet}>
+      <SheetCard style={styles.sheet}>
         <View style={styles.header}>
           <Label>{path.length > 1 ? path.slice(0, -1).join(' / ') : 'TODO'}</Label>
           <Pressable accessibilityRole="button" accessibilityLabel="닫기" onPress={onClose} style={styles.close}><Text style={styles.closeText}>×</Text></Pressable>
@@ -55,7 +56,7 @@ export function TodoDetailSheet({ todoId, onSelect, onEdit, onClose }: {
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={`${child.title} 상세 보기`} onPress={() => onSelect(child.id)} style={styles.childTitleButton}>
             <View style={styles.childInfo}><Text style={[styles.childTitle, child.status === 'completed' && styles.done]}>{child.title}</Text><CategoryBadge category={categories.find((category) => category.id === child.categoryId)} /></View>
-            <Text style={styles.chevron}>›</Text>
+            <Chevron />
           </Pressable>
         </View>)}
         {!children.length && <Sub>아직 하위 Todo가 없습니다.</Sub>}
@@ -64,7 +65,7 @@ export function TodoDetailSheet({ todoId, onSelect, onEdit, onClose }: {
           <Button label="+ 하위 Todo 추가" onPress={submit} disabled={!draft.trim() || saving} />
         </View>}
         {!canAddChild && <Sub>Todo는 3단계까지만 만들 수 있습니다.</Sub>}
-      </Card>
+      </SheetCard>
     </SafeAreaSheet>
   </Modal>;
 }
