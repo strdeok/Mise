@@ -6,6 +6,7 @@ import { todoPath } from '@/domain/logic';
 import type { Todo } from '@/domain/types';
 import { font, size, space } from '@/constants/layout';
 import { useMiseStore } from '@/store/use-mise-store';
+import { CategoryBadge } from '@/components/todo-categories';
 
 export function TodoDetailSheet({ todoId, onSelect, onEdit, onClose }: {
   todoId: string | null;
@@ -14,6 +15,7 @@ export function TodoDetailSheet({ todoId, onSelect, onEdit, onClose }: {
   onClose: () => void;
 }) {
   const todos = useMiseStore((state) => state.todos);
+  const categories = useMiseStore((state) => state.categories);
   const addTodo = useMiseStore((state) => state.addTodo);
   const toggleTodo = useMiseStore((state) => state.toggleTodo);
   const [draft, setDraft] = useState('');
@@ -29,7 +31,7 @@ export function TodoDetailSheet({ todoId, onSelect, onEdit, onClose }: {
     const title = draft.trim();
     if (!todo || !title || saving) return;
     setSaving(true);
-    try { await addTodo(title, todo.id); setDraft(''); }
+    try { if (await addTodo(title, todo.id)) setDraft(''); }
     finally { setSaving(false); }
   };
 
@@ -41,6 +43,7 @@ export function TodoDetailSheet({ todoId, onSelect, onEdit, onClose }: {
           <Pressable accessibilityRole="button" accessibilityLabel="닫기" onPress={onClose} style={styles.close}><Text style={styles.closeText}>×</Text></Pressable>
         </View>
         <Title>{todo?.title}</Title>
+        <CategoryBadge category={categories.find((category) => category.id === todo?.categoryId)} />
         <View style={styles.actions}>
           {todo && <Button label="수정" tone="quiet" onPress={() => onEdit(todo)} />}
           {todo?.parentId && <Button label="상위 Todo" tone="quiet" onPress={() => onSelect(todo.parentId!)} />}
@@ -51,7 +54,7 @@ export function TodoDetailSheet({ todoId, onSelect, onEdit, onClose }: {
             {child.status === 'completed' && <Text style={styles.checkmark}>✓</Text>}
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={`${child.title} 상세 보기`} onPress={() => onSelect(child.id)} style={styles.childTitleButton}>
-            <Text style={[styles.childTitle, child.status === 'completed' && styles.done]}>{child.title}</Text>
+            <View style={styles.childInfo}><Text style={[styles.childTitle, child.status === 'completed' && styles.done]}>{child.title}</Text><CategoryBadge category={categories.find((category) => category.id === child.categoryId)} /></View>
             <Text style={styles.chevron}>›</Text>
           </Pressable>
         </View>)}
@@ -79,6 +82,7 @@ const styles = StyleSheet.create({
   checked: { backgroundColor: palette.ink },
   checkmark: { color: palette.card },
   childTitleButton: { minHeight: size.touch, flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  childInfo: { flex: 1, alignItems: 'flex-start', gap: space[1], paddingVertical: space[2] },
   childTitle: { color: palette.ink, fontWeight: '600', fontSize: font.md, flexShrink: 1 },
   done: { textDecorationLine: 'line-through', color: palette.muted },
   chevron: { fontSize: 22, color: palette.muted, paddingHorizontal: space[2] },

@@ -12,6 +12,7 @@ import { Button, Card, Field, Label, palette, Sub, Title } from '@/components/mi
 import { BottomTabs, type Tab } from '@/components/bottom-tabs';
 import { SafeAreaSheet } from '@/components/safe-area-sheet';
 import { TodoDetailSheet } from '@/components/todo-detail-sheet';
+import { CategoryBadge, CategoryManagerSheet } from '@/components/todo-categories';
 import { ScheduleView } from '@/components/schedule-views';
 import { font, pageGutter, size, space } from '@/constants/layout';
 import { notificationPermission, notificationPermissionStatus, reconcileSessionNotifications } from '@/notifications/local-notifications';
@@ -24,10 +25,26 @@ const TIMELINE_START_MINUTE = 0;
 const TIMELINE_HEIGHT = 24 * 60;
 
 function TodoForm({ visible, close, editing, parentId }: { visible: boolean; close: () => void; editing: Todo | null; parentId: string | null }) {
-  const todos = useMiseStore((s) => s.todos); const add = useMiseStore((s) => s.addTodo); const update = useMiseStore((s) => s.updateTodo); const [title, setTitle] = useState(''); const [selectedParent, setSelectedParent] = useState<string | null>(null);
-  useEffect(() => { if (visible) { setTitle(editing?.title ?? ''); setSelectedParent(editing?.parentId ?? parentId); } }, [visible, editing, parentId]);
+  const todos = useMiseStore((s) => s.todos); const categories = useMiseStore((s) => s.categories); const add = useMiseStore((s) => s.addTodo); const update = useMiseStore((s) => s.updateTodo); const saveCategory = useMiseStore((s) => s.saveCategory); const [title, setTitle] = useState(''); const [selectedParent, setSelectedParent] = useState<string | null>(null); const [selectedCategory, setSelectedCategory] = useState<string | null>(null); const [newCategory, setNewCategory] = useState('');
+  useEffect(() => { if (visible) { setTitle(editing?.title ?? ''); setSelectedParent(editing?.parentId ?? parentId); setSelectedCategory(editing?.categoryId ?? null); setNewCategory(''); } }, [visible, editing, parentId]);
   const invalidParents = editing ? descendants(editing.id, todos) : new Set<string>();
-  return <Modal visible={visible} transparent animationType="slide" onRequestClose={close}><SafeAreaSheet><Card style={s.modal}><Title>{editing ? 'Todo 수정' : '새 Todo'}</Title><Field value={title} onChangeText={setTitle} placeholder="예: 통계 화면 구현" /><Label>상위 Todo</Label><ScrollView horizontal contentContainerStyle={s.chips}><Pressable onPress={() => setSelectedParent(null)} style={[s.chip, !selectedParent && s.chipOn]}><Text style={!selectedParent ? s.chipTextOn : s.chipText}>없음</Text></Pressable>{todos.filter((todo) => !invalidParents.has(todo.id) && !todo.archivedAt && todoPath(todo.id, todos).length < 3).map((todo) => <Pressable key={todo.id} onPress={() => setSelectedParent(todo.id)} style={[s.chip, selectedParent === todo.id && s.chipOn]}><Text style={selectedParent === todo.id ? s.chipTextOn : s.chipText}>{todo.title}</Text></Pressable>)}</ScrollView><View style={s.row}><Button label="취소" tone="quiet" onPress={close} /><Button label="저장" onPress={async () => { const ok = editing ? await update(editing.id, { title, parentId: selectedParent }) : (await add(title, selectedParent), true); if (ok) close(); }} /></View></Card></SafeAreaSheet></Modal>;
+  const createCategory = async () => { const result = await saveCategory(newCategory); if (result) { setSelectedCategory(result); setNewCategory(''); } };
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={close}><SafeAreaSheet><Card style={s.modal}>
+    <Title>{editing ? 'Todo 수정' : '새 Todo'}</Title>
+    <Field value={title} onChangeText={setTitle} placeholder="예: 통계 화면 구현" />
+    <Label>상위 Todo</Label>
+    <ScrollView horizontal contentContainerStyle={s.chips} keyboardShouldPersistTaps="handled">
+      <Pressable onPress={() => setSelectedParent(null)} style={[s.chip, !selectedParent && s.chipOn]}><Text style={!selectedParent ? s.chipTextOn : s.chipText}>없음</Text></Pressable>
+      {todos.filter((todo) => !invalidParents.has(todo.id) && !todo.archivedAt && todoPath(todo.id, todos).length < 3).map((todo) => <Pressable key={todo.id} onPress={() => setSelectedParent(todo.id)} style={[s.chip, selectedParent === todo.id && s.chipOn]}><Text style={selectedParent === todo.id ? s.chipTextOn : s.chipText}>{todo.title}</Text></Pressable>)}
+    </ScrollView>
+    <Label>카테고리 · 선택 사항</Label>
+    <ScrollView horizontal contentContainerStyle={s.chips} keyboardShouldPersistTaps="handled">
+      <Pressable accessibilityRole="button" accessibilityLabel="카테고리 없음" onPress={() => setSelectedCategory(null)} style={[s.chip, !selectedCategory && s.chipOn]}><Text style={!selectedCategory ? s.chipTextOn : s.chipText}>없음</Text></Pressable>
+      {categories.slice().sort((a, b) => a.order - b.order).map((category) => <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`${category.name} 카테고리 선택`} onPress={() => setSelectedCategory(category.id)} style={s.categoryOption}><CategoryBadge category={category} selected={selectedCategory === category.id} /></Pressable>)}
+    </ScrollView>
+    <View style={s.categoryCreate}><View style={s.flex}><Field value={newCategory} onChangeText={setNewCategory} placeholder="새 카테고리 이름" /></View><Button label="등록" tone="quiet" disabled={!newCategory.trim()} onPress={createCategory} /></View>
+    <View style={s.row}><Button label="취소" tone="quiet" onPress={close} /><Button label="Todo 저장" onPress={async () => { const ok = editing ? await update(editing.id, { title, parentId: selectedParent, categoryId: selectedCategory }) : await add(title, selectedParent, true, selectedCategory); if (ok) close(); }} /></View>
+  </Card></SafeAreaSheet></Modal>;
 }
 
 function BlockForm({ visible, close, selectedDate, editing, initialStartMinute }: { visible: boolean; close: () => void; selectedDate: string; editing: ScheduleBlock | null; initialStartMinute: number | null }) {
@@ -38,34 +55,35 @@ function BlockForm({ visible, close, selectedDate, editing, initialStartMinute }
 }
 
 function Today({ addTodo, openTodo }: { addTodo: () => void; openTodo: (todo: Todo) => void }) {
-  const todos = useMiseStore((x) => x.todos); const sessions = useMiseStore((x) => x.sessions); const blocks = useMiseStore((x) => x.blocks); const toggle = useMiseStore((x) => x.toggleTodo); const toggleToday = useMiseStore((x) => x.toggleToday); const remove = useMiseStore((x) => x.deleteTodo); const start = useMiseStore((x) => x.prepareSession); const key = dateKey();
+  const todos = useMiseStore((x) => x.todos); const categories = useMiseStore((x) => x.categories); const sessions = useMiseStore((x) => x.sessions); const blocks = useMiseStore((x) => x.blocks); const toggle = useMiseStore((x) => x.toggleTodo); const toggleToday = useMiseStore((x) => x.toggleToday); const remove = useMiseStore((x) => x.deleteTodo); const start = useMiseStore((x) => x.prepareSession); const key = dateKey();
   const listed = todos.filter((todo) => !todo.archivedAt && todo.todayDateKeys.includes(key)); const seconds = sessions.filter((session) => session.status === 'completed' && !session.excludedFromStatsAt && session.type === 'focus' && session.localStartDate === key).reduce((sum, session) => sum + (session.recordedSeconds ?? 0), 0); const next = blocks.filter((block) => !block.deletedAt && block.dateKey === key && block.endMinute > new Date().getHours() * 60 + new Date().getMinutes()).sort((a,b) => a.startMinute-b.startMinute)[0];
   return <ScrollView contentContainerStyle={s.content}>
     <View style={s.todayIntro}><Label>MISE EN PLACE · {key}</Label><Text style={s.todayHeading}>오늘</Text><Sub>오늘 할 일을 정리하고 집중한 시간을 기록하세요.</Sub></View>
     <View style={s.focusPanel}><Label>오늘 집중한 시간</Label><Text style={s.focusNumber}>{formatDuration(seconds)}</Text><View style={s.focusDivider} /><Text style={s.nextLabel}>다음 일정</Text><Text style={s.nextValue}>{next ? `${formatClock(next.startMinute)}  ${next.title}` : '예정된 일정이 없습니다.'}</Text></View>
     <View style={s.sectionHead}><Text style={s.sectionTitle}>오늘 할 일 <Text style={s.count}>{listed.length}</Text></Text><Pressable onPress={addTodo} style={s.textAction}><Text style={s.textActionLabel}>+ 추가</Text></Pressable></View>
-    <View style={s.flatList}>{listed.map((todo) => <View key={todo.id} style={s.flatTodoRow}><Pressable accessibilityLabel={`${todo.title} 완료 전환`} onPress={() => toggle(todo.id)} style={[s.check, todo.status === 'completed' && s.checked]}>{todo.status === 'completed' && <Text style={{color:'#fff'}}>✓</Text>}</Pressable><Pressable style={s.flex} onPress={() => openTodo(todo)}><Text style={[s.todoTitle, todo.status === 'completed' && s.done]}>{todo.title}</Text><Sub>{todo.parentId ? '하위 Todo' : '프로젝트'}</Sub></Pressable><Pressable style={s.focusAction} onPress={() => start('focus', todo.id).then((sessionId) => sessionId && router.push('/timer'))}><Text style={s.focusActionText}>집중 ›</Text></Pressable><Pressable hitSlop={10} onPress={() => Alert.alert('Todo 메뉴', todo.title, [{text:'오늘에서 제외', onPress:()=>toggleToday(todo.id,key)},{text:'삭제',style:'destructive',onPress:()=>remove(todo.id)},{text:'취소',style:'cancel'}])}><Text style={s.menu}>···</Text></Pressable></View>)}{!listed.length && <Text style={s.emptyLine}>오늘 할 일이 없습니다. 할 일을 추가해 보세요.</Text>}</View>
+    <View style={s.flatList}>{listed.map((todo) => <View key={todo.id} style={s.flatTodoRow}><Pressable accessibilityLabel={`${todo.title} 완료 전환`} onPress={() => toggle(todo.id)} style={[s.check, todo.status === 'completed' && s.checked]}>{todo.status === 'completed' && <Text style={{color:'#fff'}}>✓</Text>}</Pressable><Pressable style={s.flex} onPress={() => openTodo(todo)}><Text style={[s.todoTitle, todo.status === 'completed' && s.done]}>{todo.title}</Text><View style={s.todoMeta}><Sub>{todo.parentId ? '하위 Todo' : '프로젝트'}</Sub><CategoryBadge category={categories.find((category) => category.id === todo.categoryId)} /></View></Pressable><Pressable style={s.focusAction} onPress={() => start('focus', todo.id).then((sessionId) => sessionId && router.push('/timer'))}><Text style={s.focusActionText}>집중 ›</Text></Pressable><Pressable hitSlop={10} onPress={() => Alert.alert('Todo 메뉴', todo.title, [{text:'오늘에서 제외', onPress:()=>toggleToday(todo.id,key)},{text:'삭제',style:'destructive',onPress:()=>remove(todo.id)},{text:'취소',style:'cancel'}])}><Text style={s.menu}>···</Text></Pressable></View>)}{!listed.length && <Text style={s.emptyLine}>오늘 할 일이 없습니다. 할 일을 추가해 보세요.</Text>}</View>
   </ScrollView>;
 }
 
-function TodoList({ addTodo, editTodo, openTodo }: { addTodo: (parentId?: string | null) => void; editTodo: (todo: Todo) => void; openTodo: (todo: Todo) => void }) {
-  const todos = useMiseStore((x) => x.todos); const toggle = useMiseStore((x) => x.toggleTodo); const archive = useMiseStore((x) => x.archiveTodo); const reorder = useMiseStore((x) => x.reorderTodo); const remove = useMiseStore((x) => x.deleteTodo); const [archived, setArchived] = useState(false); const [query, setQuery] = useState(''); const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
-  const base = todos.filter((todo) => archived ? !!todo.archivedAt : !todo.archivedAt); const normalizedQuery = query.trim().toLocaleLowerCase(); const visibleIds = new Set(base.filter((todo) => !normalizedQuery || todo.title.toLocaleLowerCase().includes(normalizedQuery)).map((todo) => todo.id));
-  if (normalizedQuery) { let changed = true; while (changed) { changed = false; base.forEach((todo) => { if (visibleIds.has(todo.id) && todo.parentId && !visibleIds.has(todo.parentId)) { visibleIds.add(todo.parentId); changed = true; } }); } }
+function TodoList({ addTodo, editTodo, openTodo, manageCategories }: { addTodo: (parentId?: string | null) => void; editTodo: (todo: Todo) => void; openTodo: (todo: Todo) => void; manageCategories: () => void }) {
+  const todos = useMiseStore((x) => x.todos); const categories = useMiseStore((x) => x.categories); const toggle = useMiseStore((x) => x.toggleTodo); const archive = useMiseStore((x) => x.archiveTodo); const reorder = useMiseStore((x) => x.reorderTodo); const remove = useMiseStore((x) => x.deleteTodo); const [archived, setArchived] = useState(false); const [query, setQuery] = useState(''); const [categoryFilter, setCategoryFilter] = useState<string | null>(null); const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  useEffect(() => { if (categoryFilter && categoryFilter !== 'none' && !categories.some((category) => category.id === categoryFilter)) setCategoryFilter(null); }, [categories, categoryFilter]);
+  const base = todos.filter((todo) => archived ? !!todo.archivedAt : !todo.archivedAt); const normalizedQuery = query.trim().toLocaleLowerCase(); const visibleIds = new Set(base.filter((todo) => (!normalizedQuery || todo.title.toLocaleLowerCase().includes(normalizedQuery)) && (!categoryFilter || (categoryFilter === 'none' ? !todo.categoryId : todo.categoryId === categoryFilter))).map((todo) => todo.id));
+  if (normalizedQuery || categoryFilter) { let changed = true; while (changed) { changed = false; base.forEach((todo) => { if (visibleIds.has(todo.id) && todo.parentId && !visibleIds.has(todo.parentId)) { visibleIds.add(todo.parentId); changed = true; } }); } }
   const visible = base.filter((todo) => visibleIds.has(todo.id)); const roots = visible.filter((todo) => !todo.parentId).sort((a,b) => a.order - b.order);
   const openMenu = (todo: Todo) => Alert.alert(todo.title, 'Todo 관리', [{ text: '수정', onPress: () => editTodo(todo) }, ...(!archived && todoPath(todo.id, todos).length < 3 ? [{ text: '하위 Todo 추가', onPress: () => openTodo(todo) }] : []), { text: '위로 이동', onPress: () => reorder(todo.id, -1) }, { text: '아래로 이동', onPress: () => reorder(todo.id, 1) }, { text: archived ? '복원' : '보관', onPress: () => archive(todo.id, !archived) }, ...(!archived ? [{ text: '삭제', style: 'destructive' as const, onPress: () => Alert.alert('Todo 삭제', '하위 Todo도 함께 삭제되며, 완료 Focus 기록은 보존하지만 통계에서는 제외합니다.', [{ text: '취소', style: 'cancel' as const }, { text: '삭제', style: 'destructive' as const, onPress: () => remove(todo.id) }]) }] : []), { text: '취소', style: 'cancel' }]);
   const toggleCollapsed = (id: string) => setCollapsedIds((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const rows = (parentId: string | null, level = 0): ReactNode[] => visible.filter((todo) => todo.parentId === parentId).sort((a,b) => a.order - b.order).flatMap((todo) => {
     const childCount = visible.filter((item) => item.parentId === todo.id).length;
-    const collapsed = !normalizedQuery && collapsedIds.has(todo.id);
+    const collapsed = !normalizedQuery && !categoryFilter && collapsedIds.has(todo.id);
     return [<Animated.View key={todo.id} entering={level ? FadeIn.duration(150).reduceMotion(ReduceMotion.System) : undefined} exiting={level ? FadeOut.duration(110).reduceMotion(ReduceMotion.System) : undefined} layout={LinearTransition.duration(motion.treeMs).reduceMotion(ReduceMotion.System)} style={[s.todoTreeRow, { marginLeft: level * 16 }]}>
       {childCount ? <Pressable accessibilityRole="button" accessibilityLabel={`${todo.title} ${collapsed ? '펼치기' : '접기'}`} onPress={() => toggleCollapsed(todo.id)} style={s.treeToggle}><Text style={s.treeToggleText}>{collapsed ? '›' : '⌄'}</Text></Pressable> : <View style={s.treeToggle} />}
       <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: todo.status === 'completed' }} accessibilityLabel={`${todo.title} 완료 전환`} onPress={() => toggle(todo.id)} style={[s.check, todo.status === 'completed' && s.checked]}>{todo.status === 'completed' && <Text style={{ color:'#fff' }}>✓</Text>}</Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${todo.title} 상세 보기`} style={s.flex} onPress={() => openTodo(todo)}><Text style={[s.todoTitle, todo.status === 'completed' && s.done]}>{todo.title}</Text><Sub>{level === 0 ? '프로젝트' : `${level}단계 Todo`}{childCount ? ` · 하위 ${childCount}` : ''}</Sub></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${todo.title} 상세 보기`} style={s.flex} onPress={() => openTodo(todo)}><Text style={[s.todoTitle, todo.status === 'completed' && s.done]}>{todo.title}</Text><View style={s.todoMeta}><Sub>{level === 0 ? '프로젝트' : `${level}단계 Todo`}{childCount ? ` · 하위 ${childCount}` : ''}</Sub><CategoryBadge category={categories.find((category) => category.id === todo.categoryId)} /></View></Pressable>
       <Pressable hitSlop={10} onPress={() => openMenu(todo)}><Text style={s.menu}>···</Text></Pressable>
     </Animated.View>, ...(!collapsed ? rows(todo.id, level + 1) : [])];
   });
-  return <ScrollView contentContainerStyle={s.content}><View style={s.head}><View><Label>MISE EN PLACE</Label><Title>전체 Todo</Title></View><Button label="+ 추가" onPress={() => addTodo(null)} /></View><Field value={query} onChangeText={setQuery} placeholder="Todo 검색" /><View style={s.period}><Button label="진행 중" tone={!archived ? 'primary' : 'quiet'} onPress={() => setArchived(false)} /><Button label="보관함" tone={archived ? 'primary' : 'quiet'} onPress={() => setArchived(true)} /></View>{roots.length ? rows(null) : <Card><Sub>{query ? '검색 결과가 없습니다.' : archived ? '보관한 Todo가 없습니다.' : '새 Todo를 추가해 보세요.'}</Sub></Card>}</ScrollView>;
+  return <ScrollView contentContainerStyle={s.content}><View style={s.head}><View><Label>MISE EN PLACE</Label><Title>전체 Todo</Title></View><View style={s.row}><Button label="카테고리" tone="quiet" onPress={manageCategories} /><Button label="+ 추가" onPress={() => addTodo(null)} /></View></View><Field value={query} onChangeText={setQuery} placeholder="Todo 검색" /><View style={s.period}><Button label="진행 중" tone={!archived ? 'primary' : 'quiet'} onPress={() => setArchived(false)} /><Button label="보관함" tone={archived ? 'primary' : 'quiet'} onPress={() => setArchived(true)} /></View><ScrollView horizontal contentContainerStyle={s.categoryFilters} keyboardShouldPersistTaps="handled"><Pressable onPress={() => setCategoryFilter(null)} style={[s.filterChip, !categoryFilter && s.filterChipOn]}><Text style={!categoryFilter ? s.filterTextOn : s.filterText}>전체</Text></Pressable><Pressable onPress={() => setCategoryFilter('none')} style={[s.filterChip, categoryFilter === 'none' && s.filterChipOn]}><Text style={categoryFilter === 'none' ? s.filterTextOn : s.filterText}>미분류</Text></Pressable>{categories.slice().sort((a, b) => a.order - b.order).map((category) => <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`${category.name} 카테고리 필터`} onPress={() => setCategoryFilter(category.id)} style={s.categoryOption}><CategoryBadge category={category} selected={categoryFilter === category.id} /></Pressable>)}</ScrollView>{roots.length ? rows(null) : <Card><Sub>{query || categoryFilter ? '조건에 맞는 Todo가 없습니다.' : archived ? '보관한 Todo가 없습니다.' : '새 Todo를 추가해 보세요.'}</Sub></Card>}</ScrollView>;
 }
 
 function TimetableBlock({ block, index, todoTitle, onEdit, onFocus, onDelete }: { block: ScheduleBlock; index: number; todoTitle: string; onEdit: () => void; onFocus: () => void; onDelete: () => void }) {
@@ -105,7 +123,7 @@ function Settings() {
 }
 
 export default function Home() {
-  const hydrate = useMiseStore((x) => x.hydrate); const hydrated = useMiseStore((x) => x.hydrated); const sessions = useMiseStore((x) => x.sessions); const settings = useMiseStore((x) => x.settings); const error = useMiseStore((x) => x.error); const [tab, setTab] = useState<Tab>('today'); const [todoForm, setTodoForm] = useState<{ editing: Todo | null; parentId: string | null } | null>(null); const [todoDetailId, setTodoDetailId] = useState<string | null>(null); const [blockForm, setBlockForm] = useState<{ date: string; block: ScheduleBlock | null; startMinute: number | null } | null>(null); const [now, setNow] = useState(Date.now());
+  const hydrate = useMiseStore((x) => x.hydrate); const hydrated = useMiseStore((x) => x.hydrated); const sessions = useMiseStore((x) => x.sessions); const settings = useMiseStore((x) => x.settings); const error = useMiseStore((x) => x.error); const [tab, setTab] = useState<Tab>('today'); const [todoForm, setTodoForm] = useState<{ editing: Todo | null; parentId: string | null } | null>(null); const [todoDetailId, setTodoDetailId] = useState<string | null>(null); const [categoryManagerVisible, setCategoryManagerVisible] = useState(false); const [blockForm, setBlockForm] = useState<{ date: string; block: ScheduleBlock | null; startMinute: number | null } | null>(null); const [now, setNow] = useState(Date.now());
   useEffect(() => { hydrate(); }, [hydrate]); useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []); useEffect(() => { if (hydrated) reconcileSessionNotifications(sessions, settings).catch(() => undefined); }, [hydrated]); if (!hydrated) return <SafeAreaView style={s.center}><Text>데이터를 준비하고 있어요…</Text></SafeAreaView>;
   const openTodo = (todo: Todo) => setTodoDetailId(todo.id);
   const editTodo = (editing: Todo) => { setTodoDetailId(null); setTodoForm({ editing, parentId: editing.parentId }); };
@@ -114,7 +132,7 @@ export default function Home() {
     <View style={s.app}>
       <Animated.View key={tab} entering={FadeIn.duration(motion.tabEnterMs).reduceMotion(ReduceMotion.System)} style={s.flex}>
         {tab === 'today' && <Today addTodo={() => setTodoForm({ editing:null, parentId:null })} openTodo={openTodo} />}
-        {tab === 'todos' && <TodoList addTodo={(parentId = null) => setTodoForm({ editing:null, parentId })} editTodo={editTodo} openTodo={openTodo} />}
+        {tab === 'todos' && <TodoList addTodo={(parentId = null) => setTodoForm({ editing:null, parentId })} editTodo={editTodo} openTodo={openTodo} manageCategories={() => setCategoryManagerVisible(true)} />}
         {tab === 'schedule' && <ScheduleView addBlock={(date, block, startMinute) => setBlockForm({ date, block: block ?? null, startMinute: startMinute ?? null })} />}
         {tab === 'stats' && <Stats />}
         {tab === 'settings' && <Settings />}
@@ -123,6 +141,7 @@ export default function Home() {
       <BottomTabs value={tab} onChange={setTab} />
     </View>
     <TodoDetailSheet todoId={todoDetailId} onSelect={setTodoDetailId} onEdit={editTodo} onClose={() => setTodoDetailId(null)} />
+    <CategoryManagerSheet visible={categoryManagerVisible} close={() => setCategoryManagerVisible(false)} />
     <TodoForm visible={!!todoForm} close={() => setTodoForm(null)} editing={todoForm?.editing ?? null} parentId={todoForm?.parentId ?? null} />
     <BlockForm visible={!!blockForm} close={() => setBlockForm(null)} selectedDate={blockForm?.date ?? dateKey()} editing={blockForm?.block ?? null} initialStartMinute={blockForm?.startMinute ?? null} />
     {error && <Pressable onPress={() => useMiseStore.setState({ error:null })} style={s.toast}><Text style={{color:'#fff'}}>{error}</Text></Pressable>}
@@ -148,4 +167,12 @@ const s = StyleSheet.create({ safe:{flex:1,backgroundColor:palette.bg},app:{flex
   emptyLine:{color:palette.muted,fontSize:font.md,paddingVertical:space[6]},
   treeToggle:{width:30,minHeight:size.touch,alignItems:'center',justifyContent:'center'},
   treeToggleText:{fontSize:24,color:palette.ink,lineHeight:28},
+  todoMeta:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:space[1],marginTop:space[1]},
+  categoryCreate:{flexDirection:'row',alignItems:'center',gap:space[2]},
+  categoryOption:{minHeight:size.touch,justifyContent:'center'},
+  categoryFilters:{alignItems:'center',gap:space[2]},
+  filterChip:{minHeight:size.touch,paddingHorizontal:space[3],borderRadius:99,borderWidth:1,borderColor:palette.line,justifyContent:'center'},
+  filterChipOn:{backgroundColor:palette.ink,borderColor:palette.ink},
+  filterText:{fontSize:font.sm,fontWeight:'600',color:palette.ink},
+  filterTextOn:{fontSize:font.sm,fontWeight:'700',color:palette.card},
  });
