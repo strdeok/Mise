@@ -15,6 +15,7 @@ import { TodoDetailSheet } from '@/components/todo-detail-sheet';
 import { TodoActionsSheet, TodoMenuButton, type MenuAnchor } from '@/components/todo-actions-sheet';
 import { CategoryBadge, CategoryManagerSheet } from '@/components/todo-categories';
 import { ScheduleView } from '@/components/schedule-views';
+import { StatsReview, TodayBriefing } from '@/components/mise-dashboard';
 import { font, pageGutter, size, space } from '@/constants/layout';
 import { notificationPermission, notificationPermissionStatus, reconcileSessionNotifications } from '@/notifications/local-notifications';
 import { motion } from '@/components/motion';
@@ -26,8 +27,8 @@ const TIMELINE_START_MINUTE = 0;
 const TIMELINE_HEIGHT = 24 * 60;
 
 function TodoForm({ visible, close, editing, parentId }: { visible: boolean; close: () => void; editing: Todo | null; parentId: string | null }) {
-  const todos = useMiseStore((s) => s.todos); const categories = useMiseStore((s) => s.categories); const add = useMiseStore((s) => s.addTodo); const update = useMiseStore((s) => s.updateTodo); const saveCategory = useMiseStore((s) => s.saveCategory); const [title, setTitle] = useState(''); const [selectedParent, setSelectedParent] = useState<string | null>(null); const [selectedCategory, setSelectedCategory] = useState<string | null>(null); const [newCategory, setNewCategory] = useState(''); const [picker, setPicker] = useState<'parent' | 'category' | null>(null); const [search, setSearch] = useState('');
-  useEffect(() => { if (visible) { setTitle(editing?.title ?? ''); setSelectedParent(editing?.parentId ?? parentId); setSelectedCategory(editing?.categoryId ?? null); setNewCategory(''); setPicker(null); setSearch(''); } }, [visible, editing, parentId]);
+  const todos = useMiseStore((s) => s.todos); const categories = useMiseStore((s) => s.categories); const add = useMiseStore((s) => s.addTodo); const update = useMiseStore((s) => s.updateTodo); const saveCategory = useMiseStore((s) => s.saveCategory); const [title, setTitle] = useState(''); const [selectedParent, setSelectedParent] = useState<string | null>(null); const [selectedCategory, setSelectedCategory] = useState<string | null>(null); const [newCategory, setNewCategory] = useState(''); const [picker, setPicker] = useState<'parent' | 'category' | null>(null); const [search, setSearch] = useState(''); const [detailsOpen, setDetailsOpen] = useState(false);
+  useEffect(() => { if (visible) { setTitle(editing?.title ?? ''); setSelectedParent(editing?.parentId ?? parentId); setSelectedCategory(editing?.categoryId ?? null); setNewCategory(''); setPicker(null); setSearch(''); setDetailsOpen(!!editing || !!parentId); } }, [visible, editing, parentId]);
   const invalidParents = editing ? descendants(editing.id, todos) : new Set<string>();
   const availableParents = todos.filter((todo) => !invalidParents.has(todo.id) && !todo.archivedAt && todoPath(todo.id, todos).length < 3);
   const matches = (value: string) => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase());
@@ -45,12 +46,14 @@ function TodoForm({ visible, close, editing, parentId }: { visible: boolean; clo
       {picker === 'category' && !categories.some((category) => matches(category.name)) && <Sub>일치하는 카테고리가 없습니다.</Sub>}
       {picker === 'category' && <View style={s.categoryCreate}><View style={s.flex}><Field value={newCategory} onChangeText={setNewCategory} placeholder="새 카테고리 이름" /></View><Button label="등록" tone="quiet" disabled={!newCategory.trim()} onPress={createCategory} /></View>}
     </> : <>
-      <Title>{editing ? 'Todo 수정' : '새 Todo'}</Title>
+      <Label>{editing ? 'TODO 수정' : '빠른 추가'}</Label>
+      <Title>{editing ? '할 일을 다듬어보세요' : '무엇을 해야 하나요?'}</Title>
       <Field value={title} onChangeText={setTitle} placeholder="예: 통계 화면 구현" />
-      <Label>상위 Todo</Label>
+      {!detailsOpen && <Pressable accessibilityRole="button" accessibilityLabel="세부 정보 열기" onPress={() => setDetailsOpen(true)} style={s.quickDetail}><Text style={s.quickDetailText}>카테고리와 상위 Todo 추가</Text><Text style={s.selectionChevron}>+</Text></Pressable>}
+      {detailsOpen && <><Label>상위 Todo</Label>
       <Pressable accessibilityRole="button" accessibilityLabel="상위 Todo 선택" onPress={() => openPicker('parent')} style={s.selectionRow}><Text numberOfLines={1} style={s.selectionValue}>{selectedParent ? todoPath(selectedParent, todos).join(' / ') : '없음'}</Text><Text style={s.selectionChevron}>›</Text></Pressable>
       <Label>카테고리 · 선택 사항</Label>
-      <Pressable accessibilityRole="button" accessibilityLabel="카테고리 선택" onPress={() => openPicker('category')} style={s.selectionRow}><View style={s.flex}>{selectedCategoryData ? <CategoryBadge category={selectedCategoryData} /> : <Text style={s.selectionValue}>없음</Text>}</View><Text style={s.selectionChevron}>›</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="카테고리 선택" onPress={() => openPicker('category')} style={s.selectionRow}><View style={s.flex}>{selectedCategoryData ? <CategoryBadge category={selectedCategoryData} /> : <Text style={s.selectionValue}>없음</Text>}</View><Text style={s.selectionChevron}>›</Text></Pressable></>}
       <View style={s.row}><Button label="취소" tone="quiet" onPress={close} /><Button label="Todo 저장" onPress={async () => { const ok = editing ? await update(editing.id, { title, parentId: selectedParent, categoryId: selectedCategory }) : await add(title, selectedParent, true, selectedCategory); if (ok) close(); }} /></View>
     </>}
   </Card></SafeAreaSheet></Modal>;
@@ -64,14 +67,10 @@ function BlockForm({ visible, close, selectedDate, editing, initialStartMinute }
 }
 
 function Today({ addTodo, openTodo, editTodo }: { addTodo: () => void; openTodo: (todo: Todo) => void; editTodo: (todo: Todo) => void }) {
-  const todos = useMiseStore((x) => x.todos); const categories = useMiseStore((x) => x.categories); const sessions = useMiseStore((x) => x.sessions); const blocks = useMiseStore((x) => x.blocks); const toggle = useMiseStore((x) => x.toggleTodo); const start = useMiseStore((x) => x.prepareSession); const [menuTodoId, setMenuTodoId] = useState<string | null>(null); const [menuAnchor, setMenuAnchor] = useState<MenuAnchor | null>(null); const key = dateKey();
-  const listed = todos.filter((todo) => !todo.archivedAt && todo.todayDateKeys.includes(key)); const seconds = sessions.filter((session) => session.status === 'completed' && !session.excludedFromStatsAt && session.type === 'focus' && session.localStartDate === key).reduce((sum, session) => sum + (session.recordedSeconds ?? 0), 0); const next = blocks.filter((block) => !block.deletedAt && block.dateKey === key && block.endMinute > new Date().getHours() * 60 + new Date().getMinutes()).sort((a,b) => a.startMinute-b.startMinute)[0];
-  return <><ScrollView contentContainerStyle={s.content}>
-    <View style={s.todayIntro}><Label>MISE EN PLACE · {key}</Label><Text style={s.todayHeading}>오늘</Text><Sub>오늘 할 일을 정리하고 집중한 시간을 기록하세요.</Sub></View>
-    <View style={s.focusPanel}><Label>오늘 집중한 시간</Label><Text style={s.focusNumber}>{formatDuration(seconds)}</Text><View style={s.focusDivider} /><Text style={s.nextLabel}>다음 일정</Text><Text style={s.nextValue}>{next ? `${formatClock(next.startMinute)}  ${next.title}` : '예정된 일정이 없습니다.'}</Text></View>
-    <View style={s.sectionHead}><Text style={s.sectionTitle}>오늘 할 일 <Text style={s.count}>{listed.length}</Text></Text><Pressable onPress={addTodo} style={s.textAction}><Text style={s.textActionLabel}>+ 추가</Text></Pressable></View>
-    <View style={s.flatList}>{listed.map((todo) => <View key={todo.id} style={s.flatTodoRow}><Pressable accessibilityLabel={`${todo.title} 완료 전환`} onPress={() => toggle(todo.id)} style={[s.check, todo.status === 'completed' && s.checked]}>{todo.status === 'completed' && <Text style={{color:'#fff'}}>✓</Text>}</Pressable><Pressable style={s.flex} onPress={() => openTodo(todo)}><Text style={[s.todoTitle, todo.status === 'completed' && s.done]}>{todo.title}</Text><View style={s.todoMeta}><Sub>{todo.parentId ? '하위 Todo' : '프로젝트'}</Sub><CategoryBadge category={categories.find((category) => category.id === todo.categoryId)} /></View></Pressable><Pressable style={s.focusAction} onPress={() => start('focus', todo.id).then((sessionId) => sessionId && router.push('/timer'))}><Text style={s.focusActionText}>집중 ›</Text></Pressable><TodoMenuButton title={todo.title} onOpen={(anchor) => { setMenuAnchor(anchor); setMenuTodoId(todo.id); }} /></View>)}{!listed.length && <Text style={s.emptyLine}>오늘 할 일이 없습니다. 할 일을 추가해 보세요.</Text>}</View>
-  </ScrollView><TodoActionsSheet todo={todos.find((todo) => todo.id === menuTodoId) ?? null} anchor={menuAnchor} context="today" onClose={() => { setMenuTodoId(null); setMenuAnchor(null); }} onEdit={editTodo} onOpen={openTodo} /></>;
+  const todos = useMiseStore((state) => state.todos);
+  const [menuTodoId, setMenuTodoId] = useState<string | null>(null);
+  const [menuAnchor, setMenuAnchor] = useState<MenuAnchor | null>(null);
+  return <><TodayBriefing onAddTodo={addTodo} onOpenTodo={openTodo} onEditTodo={editTodo} onMenu={(todo, anchor) => { setMenuTodoId(todo.id); setMenuAnchor(anchor); }} /><TodoActionsSheet todo={todos.find((todo) => todo.id === menuTodoId) ?? null} anchor={menuAnchor} context="today" onClose={() => { setMenuTodoId(null); setMenuAnchor(null); }} onEdit={editTodo} onOpen={openTodo} /></>;
 }
 
 function TodoList({ addTodo, editTodo, openTodo, manageCategories }: { addTodo: (parentId?: string | null) => void; editTodo: (todo: Todo) => void; openTodo: (todo: Todo) => void; manageCategories: () => void }) {
@@ -120,8 +119,7 @@ function Schedule({ addBlock }: { addBlock: (date: string, block?: ScheduleBlock
 }
 
 function Stats() {
-  const sessions = useMiseStore((x) => x.sessions); const blocks = useMiseStore((x) => x.blocks); const todos = useMiseStore((x) => x.todos); const [mode, setMode] = useState<'week' | 'month'>('week'); const [anchor, setAnchor] = useState(new Date()); const period = mode === 'week' ? weekPeriod(anchor) : monthPeriod(anchor); const stats = useMemo(() => aggregateStats(sessions, blocks, todos, period), [sessions, blocks, todos, period.startDate, period.endDate]);
-  return <ScrollView contentContainerStyle={s.content}><View style={s.period}><Button label="주간" tone={mode === 'week' ? 'primary' : 'quiet'} onPress={() => setMode('week')} /><Button label="월간" tone={mode === 'month' ? 'primary' : 'quiet'} onPress={() => setMode('month')} /></View><View style={s.dateNav}><Pressable onPress={() => setAnchor(movePeriod(mode, anchor, -1))}><Text style={s.nav}>‹</Text></Pressable><View style={{alignItems:'center'}}><Label>{period.label}</Label><Title>시간 회고</Title></View><Pressable onPress={() => setAnchor(movePeriod(mode, anchor, 1))}><Text style={s.nav}>›</Text></Pressable></View><View style={s.grid}><Card style={s.flex}><Label>FOCUS</Label><Text style={s.stat}>{formatDuration(stats.focusSeconds)}</Text></Card><Card style={s.flex}><Label>BREAK</Label><Text style={s.stat}>{formatDuration(stats.breakSeconds)}</Text></Card></View><Card><Label>계획 대비 실제</Label><Text style={s.big}>{formatDuration(stats.focusSeconds)} <Text style={s.muted}>/ {formatDuration(stats.plannedSeconds)}</Text></Text><Sub>계획 내 {formatDuration(stats.plannedFocusSeconds)} · 계획 외 {formatDuration(stats.unplannedFocusSeconds)}</Sub></Card><Title>Todo별 기록</Title>{stats.byTodo.map((todo) => <Card key={todo.id} style={{ marginLeft: (todo.path.length - 1) * 12 }}><View style={s.head}><Text style={s.todoTitle}>{todo.title}{todo.isDeleted ? ' · 삭제됨' : ''}</Text><Text style={s.stat}>{formatDuration(todo.totalSeconds)}</Text></View><Sub>{todo.directSeconds ? `직접 ${formatDuration(todo.directSeconds)}` : '직접 기록 없음'}{todo.childSeconds ? ` · 하위 ${formatDuration(todo.childSeconds)}` : ''}</Sub></Card>)}{!stats.byTodo.length && <Card><Sub>완료한 기록이 없습니다.</Sub></Card>}</ScrollView>;
+  return <StatsReview />;
 }
 
 function Settings() {
@@ -177,7 +175,7 @@ const s = StyleSheet.create({ safe:{flex:1,backgroundColor:palette.bg},app:{flex
   treeToggleText:{fontSize:24,color:palette.ink,lineHeight:28},
   todoMeta:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:space[1],marginTop:space[1]},
   categoryCreate:{flexDirection:'row',alignItems:'center',gap:space[2]},
-  selectionRow:{minHeight:size.touchLarge,borderWidth:1,borderColor:palette.line,borderRadius:8,paddingHorizontal:space[3],flexDirection:'row',alignItems:'center',gap:space[2]},
+  selectionRow:{minHeight:size.touchLarge,borderWidth:1,borderColor:palette.line,borderRadius:8,paddingHorizontal:space[3],flexDirection:'row',alignItems:'center',gap:space[2]},quickDetail:{minHeight:size.touch,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderTopWidth:1,borderBottomWidth:1,borderColor:palette.line},quickDetailText:{fontSize:font.sm,fontWeight:'700',color:palette.muted},
   selectionValue:{flex:1,color:palette.ink,fontSize:font.md,fontWeight:'600'},
   selectionChevron:{color:palette.muted,fontSize:24,lineHeight:28},
   pickerHeader:{flexDirection:'row',alignItems:'center',gap:space[2]},

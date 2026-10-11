@@ -107,7 +107,8 @@ function MonthView({ selectedDate, blocks, onSelect }: { selectedDate: string; b
   const markedDates = active.reduce<Record<string, { marked?: boolean; dotColor?: string; selected?: boolean; selectedColor?: string }>>((all, block) => ({ ...all, [block.dateKey]: { marked: true, dotColor: palette.ink } }), {});
   markedDates[selectedDate] = { ...markedDates[selectedDate], selected: true, selectedColor: palette.ink };
   const selected = active.filter((block) => block.dateKey === selectedDate).sort((a, b) => a.startMinute - b.startMinute);
-  return <ScrollView style={styles.monthScroll} contentContainerStyle={styles.monthContent}><Calendar current={selectedDate} firstDay={1} onDayPress={(value) => onSelect(value.dateString)} onMonthChange={(value) => onSelect(`${value.year}-${String(value.month).padStart(2, '0')}-01`)} markedDates={markedDates} theme={{ calendarBackground: palette.bg, dayTextColor: palette.ink, monthTextColor: palette.ink, textMonthFontWeight: '600', textDayFontWeight: '500', arrowColor: palette.ink, todayTextColor: palette.ink, textDisabledColor: '#BDBDBD' }} /><View style={styles.monthAgenda}><Label>{selectedDate}</Label><Title>선택한 날의 일정</Title>{selected.length ? selected.map((block) => <View key={block.id} style={styles.monthBlock}><Text style={styles.monthBlockTime}>{formatClock(block.startMinute)}</Text><View style={styles.monthBlockText}><Text style={styles.timetableTitle}>{block.title}</Text><Sub>{formatClock(block.startMinute)}–{formatClock(block.endMinute)}</Sub></View></View>) : <Sub>등록한 일정이 없습니다.</Sub>}</View></ScrollView>;
+  const monthBlocks = active.filter((block) => block.dateKey.slice(0, 7) === selectedDate.slice(0, 7));
+  return <ScrollView style={styles.monthScroll} contentContainerStyle={styles.monthContent}><View style={styles.monthSummary}><Text style={styles.monthSummaryNumber}>{monthBlocks.length}</Text><Text style={styles.monthSummaryText}>이번 달에 계획한 블록</Text><Text style={styles.monthSummaryText}>{[...new Set(monthBlocks.map((block) => block.dateKey))].length}일에 배치됨</Text></View><Calendar current={selectedDate} firstDay={1} onDayPress={(value) => onSelect(value.dateString)} onMonthChange={(value) => onSelect(`${value.year}-${String(value.month).padStart(2, '0')}-01`)} markedDates={markedDates} theme={{ calendarBackground: palette.bg, dayTextColor: palette.ink, monthTextColor: palette.ink, textMonthFontWeight: '700', textDayFontWeight: '600', arrowColor: palette.ink, todayTextColor: palette.ink, textDisabledColor: '#BDBDBD', textDayHeaderFontWeight: '700', textDayHeaderFontSize: font.xs }} /><View style={styles.monthAgenda}><View style={styles.monthAgendaHead}><View><Label>{selectedDate}</Label><Title>선택한 날</Title></View><Text style={styles.monthAgendaCount}>{selected.length}개</Text></View>{selected.length ? selected.map((block) => <View key={block.id} style={styles.monthBlock}><Text style={styles.monthBlockTime}>{formatClock(block.startMinute)}</Text><View style={styles.monthBlockMark} /><View style={styles.monthBlockText}><Text style={styles.timetableTitle}>{block.title}</Text><Sub>{formatClock(block.startMinute)}–{formatClock(block.endMinute)}</Sub></View></View>) : <Sub>등록한 일정이 없습니다. 빈 시간대를 눌러 추가할 수 있어요.</Sub>}</View></ScrollView>;
 }
 
 function WeekView({ selectedDate, blocks, onSelect }: { selectedDate: string; blocks: ScheduleBlock[]; onSelect: (key: string) => void }) {
@@ -157,15 +158,17 @@ const styles = StyleSheet.create({
   switchTextOn: { color: '#fff' },
   monthContent: { paddingBottom: 128 },
   monthScroll: { flex: 1 },
-  monthAgenda: { paddingHorizontal: pageGutter(), paddingTop: space[4], gap: space[2] },
+  monthSummary: { minHeight: 58, marginHorizontal: pageGutter(), marginTop: space[3], paddingVertical: space[2], borderTopWidth: 1, borderBottomWidth: 1, borderColor: palette.line, flexDirection: 'row', alignItems: 'baseline', gap: space[2] },
+  monthSummaryNumber: { color: palette.ink, fontSize: font.xl, fontWeight: '800', letterSpacing: -.6 }, monthSummaryText: { color: palette.muted, fontSize: font.xs, fontWeight: '600' },
+  monthAgenda: { paddingHorizontal: pageGutter(), paddingTop: space[5], gap: space[2] }, monthAgendaHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, monthAgendaCount: { color: palette.muted, fontSize: font.sm, fontWeight: '700' },
   monthBlock: { flexDirection: 'row', alignItems: 'center', minHeight: 62, borderBottomWidth: 1, borderColor: palette.line },
   monthBlockTime: { width: 58, fontWeight: '600', fontSize: font.sm, color: palette.muted, fontVariant: ['tabular-nums'] },
-  monthBlockText: { flex: 1 },
+  monthBlockMark: { width: 3, alignSelf: 'stretch', marginVertical: space[2], marginRight: space[2], backgroundColor: palette.ink }, monthBlockText: { flex: 1 },
   weekGrid: { flex: 1, backgroundColor: palette.card },
   weekScroll: { paddingBottom: 128 },
   weekHeader: { height: 49, flexDirection: 'row', borderBottomWidth: 1, borderColor: palette.line },
   weekDayHead: { alignItems: 'center', justifyContent: 'center', gap: 1, borderLeftWidth: 1, borderColor: palette.line },
-  weekDayHeadSelected: { backgroundColor: palette.greenSoft },
+  weekDayHeadSelected: { backgroundColor: palette.greenSoft, borderBottomWidth: 3, borderBottomColor: palette.ink },
   weekDayText: { fontSize: font.xs, color: palette.muted, fontWeight: '500' },
   weekDateText: { color: palette.ink, fontSize: font.sm, fontWeight: '600' },
   weekDayTextSelected: { color: palette.ink },

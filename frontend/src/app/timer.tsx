@@ -49,6 +49,13 @@ type NextSession = { type: SessionType; todoId: string | null; completedLabel: s
 const typeLabel = (type: SessionType) => type === 'focus' ? 'Focus' : type === 'short_break' ? 'Short Break' : 'Long Break';
 const timeText = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 
+function Cycle({ type }: { type: SessionType }) {
+  const active = type === 'focus' ? 0 : type === 'short_break' ? 1 : 3;
+  return <View style={s.cycle} accessibilityLabel={`${typeLabel(type)} 단계`}>
+    {['FOCUS', 'BREAK', 'FOCUS', 'LONG'].map((label, index) => <View key={label} style={[s.cycleDot, index === active && s.cycleDotActive]}><Text style={[s.cycleText, index === active && s.cycleTextActive]}>{label}</Text></View>)}
+  </View>;
+}
+
 export default function Timer() {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -136,6 +143,7 @@ export default function Timer() {
   return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.wrap}>
     <View style={s.top}><Pressable onPress={() => router.back()} style={s.topAction}><Text style={s.back}>‹ 닫기</Text></Pressable><Pressable onPress={() => setFullScreen(true)} style={s.topAction}><Text style={s.topActionText}>전체화면 ⤢</Text></Pressable></View>
     <View style={s.task}><Label>MISE EN PLACE · {typeLabel(session.type).toUpperCase()}</Label><Title>{session.todoSnapshot?.title ?? (session.type === 'focus' ? '집중 시간' : '휴식 시간')}</Title><Sub>{session.todoSnapshot?.path.join(' › ') ?? '지금 이 시간에만 집중해 보세요.'}</Sub></View>
+    <Cycle type={session.type} />
     <View style={s.clock}>{dial(dialSize)}<Text style={s.time}>{timeText(shown)}</Text><Text style={s.caption}>{caption}</Text></View>
     <View style={s.meta}><Text style={s.metaText}>목표 {Math.round(session.targetSeconds / 60)}분</Text><Text style={s.dot}>·</Text><Text style={s.metaText}>{session.status === 'ready' ? '시작 버튼을 누르면 기록됩니다' : reached ? `+${Math.floor((elapsed - session.targetSeconds) / 60)}분 초과` : `${Math.max(0, Math.ceil((session.targetSeconds - elapsed) / 60))}분 남음`}</Text></View>
     {targetChoices}
@@ -148,7 +156,7 @@ export default function Timer() {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: palette.bg },
-  wrap: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24, gap: 12 },
+  wrap: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24, gap: 14 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, backgroundColor: palette.bg },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   topAction: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
@@ -156,9 +164,12 @@ const s = StyleSheet.create({
   back: { fontSize: 14, color: palette.ink, fontWeight: '600' },
   type: { fontSize: 11, fontWeight: '600', letterSpacing: 1.1, color: palette.muted },
   task: { gap: 3 },
-  clock: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 240, gap: 5, paddingVertical: 8 },
-  clockCase: { alignItems: 'center', justifyContent: 'center', borderRadius: 13, backgroundColor: '#F0F0EE', borderWidth: 1, borderColor: palette.line },
-  time: { marginTop: 10, fontSize: 42, letterSpacing: -1.6, fontWeight: '500', color: palette.ink, fontVariant: ['tabular-nums'] },
+  cycle: { flexDirection: 'row', alignSelf: 'flex-start', gap: 5 },
+  cycleDot: { minWidth: 38, height: 22, paddingHorizontal: 5, borderRadius: 999, backgroundColor: palette.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  cycleDotActive: { backgroundColor: palette.ink }, cycleText: { color: palette.muted, fontSize: 8, fontWeight: '800', letterSpacing: .4 }, cycleTextActive: { color: '#fff' },
+  clock: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 250, gap: 5, paddingVertical: 8 },
+  clockCase: { alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: '#F1F1EF', borderWidth: 1, borderColor: palette.line, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 3 },
+  time: { marginTop: 14, fontSize: 46, letterSpacing: -2.2, fontWeight: '600', color: palette.ink, fontVariant: ['tabular-nums'] },
   caption: { color: palette.muted, fontSize: 12, fontWeight: '500', letterSpacing: .4 },
   meta: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7 },
   metaText: { color: palette.muted, fontSize: 12, fontWeight: '500' },
