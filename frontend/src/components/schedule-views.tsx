@@ -40,6 +40,13 @@ const startOfWeek = (key: string) => {
   return dateKey(value);
 };
 const weekKeys = (key: string) => Array.from({ length: 7 }, (_, index) => changeDay(startOfWeek(key), index));
+const scheduleAccents = [
+  { fill: palette.blueSoft, line: palette.blue },
+  { fill: palette.mintSoft, line: palette.mint },
+  { fill: palette.purpleSoft, line: palette.purple },
+  { fill: palette.orangeSoft, line: palette.orange },
+];
+const accentFor = (block: ScheduleBlock) => scheduleAccents[block.title.split('').reduce((sum, letter) => sum + letter.charCodeAt(0), 0) % scheduleAccents.length];
 
 function TimetableBlock({ block, todoTitle, onOpen }: { block: ScheduleBlock; todoTitle: string; onOpen: () => void }) {
   const saveBlock = useMiseStore((x) => x.saveBlock);
@@ -49,6 +56,7 @@ function TimetableBlock({ block, todoTitle, onOpen }: { block: ScheduleBlock; to
   const latestBlock = useRef(block);
   latestBlock.current = block;
   const duration = block.endMinute - block.startMinute;
+  const accent = accentFor(block);
   const proposedStart = Math.max(0, Math.min(1440 - duration, Math.round((block.startMinute + deltaY) / 5) * 5));
   const blockHeight = duration - 2;
   const responder = useRef(PanResponder.create({
@@ -67,7 +75,7 @@ function TimetableBlock({ block, todoTitle, onOpen }: { block: ScheduleBlock; to
   })).current;
   return <>
     {dragging && <View pointerEvents="none" style={[styles.dropPreview, { top: proposedStart, height: blockHeight }]}>{blockHeight >= 20 && <Text style={styles.dropPreviewText}>{formatClock(proposedStart)}에 놓기</Text>}</View>}
-    <View {...responder.panHandlers} style={[styles.timetableBlock, { top: block.startMinute, height: blockHeight, opacity: dragging ? 0.35 : 1, transform: [{ translateY: dragging ? deltaY : 0 }] }]}>
+    <View {...responder.panHandlers} style={[styles.timetableBlock, { top: block.startMinute, height: blockHeight, borderColor: accent.line, backgroundColor: accent.fill, opacity: dragging ? 0.35 : 1, transform: [{ translateY: dragging ? deltaY : 0 }] }]}>
       <Pressable onPress={onOpen} accessibilityLabel={`${block.title}, ${formatClock(block.startMinute)}부터 ${formatClock(block.endMinute)}까지. 일정 메뉴 열기`} style={[styles.blockTap, { paddingVertical: duration < 40 ? 1 : 4 }]}>
         {duration >= 20 && <Text numberOfLines={1} style={styles.timetableTitle}>{block.title}</Text>}
         {duration >= 40 && <Text numberOfLines={1} style={styles.timetableMeta}>{formatClock(block.startMinute)}–{formatClock(block.endMinute)} · {todoTitle}</Text>}
@@ -106,13 +114,13 @@ function MonthView({ selectedDate, blocks, onSelect }: { selectedDate: string; b
   const markedDates: Record<string, { dots?: { key: string; color: string; selectedDotColor: string }[]; selected?: boolean; selectedColor?: string }> = {};
   active.forEach((block) => {
     const mark = markedDates[block.dateKey] ?? { dots: [] };
-    if ((mark.dots?.length ?? 0) < 3) mark.dots?.push({ key: block.id, color: palette.ink, selectedDotColor: '#fff' });
+    if ((mark.dots?.length ?? 0) < 3) mark.dots?.push({ key: block.id, color: accentFor(block).line, selectedDotColor: '#fff' });
     markedDates[block.dateKey] = mark;
   });
   markedDates[selectedDate] = { ...markedDates[selectedDate], selected: true, selectedColor: palette.ink };
   const selected = active.filter((block) => block.dateKey === selectedDate).sort((a, b) => a.startMinute - b.startMinute);
   const monthBlocks = active.filter((block) => block.dateKey.slice(0, 7) === selectedDate.slice(0, 7));
-  return <ScrollView style={styles.monthScroll} contentContainerStyle={styles.monthContent}><View style={styles.monthSummary}><Text style={styles.monthSummaryNumber}>{monthBlocks.length}</Text><Text style={styles.monthSummaryText}>이번 달에 계획한 블록</Text><Text style={styles.monthSummaryText}>{[...new Set(monthBlocks.map((block) => block.dateKey))].length}일에 배치됨</Text></View><Calendar markingType="multi-dot" current={selectedDate} firstDay={1} onDayPress={(value) => onSelect(value.dateString)} onMonthChange={(value) => onSelect(`${value.year}-${String(value.month).padStart(2, '0')}-01`)} markedDates={markedDates} theme={{ calendarBackground: palette.bg, dayTextColor: palette.ink, monthTextColor: palette.ink, textMonthFontWeight: '700', textDayFontWeight: '600', arrowColor: palette.ink, todayTextColor: palette.ink, textDisabledColor: '#BDBDBD', textDayHeaderFontWeight: '700', textDayHeaderFontSize: font.xs }} /><View style={styles.monthAgenda}><View style={styles.monthAgendaHead}><View><Label>{selectedDate}</Label><Title>선택한 날</Title></View><Text style={styles.monthAgendaCount}>{selected.length}개</Text></View>{selected.length ? selected.map((block) => <View key={block.id} style={styles.monthBlock}><Text style={styles.monthBlockTime}>{formatClock(block.startMinute)}</Text><View style={styles.monthBlockMark} /><View style={styles.monthBlockText}><Text style={styles.timetableTitle}>{block.title}</Text><Sub>{formatClock(block.startMinute)}–{formatClock(block.endMinute)}</Sub></View></View>) : <Sub>등록한 일정이 없습니다. 빈 시간대를 눌러 추가할 수 있어요.</Sub>}</View></ScrollView>;
+  return <ScrollView style={styles.monthScroll} contentContainerStyle={styles.monthContent}><View style={styles.monthSummary}><Text style={styles.monthSummaryNumber}>{monthBlocks.length}</Text><Text style={styles.monthSummaryText}>이번 달에 계획한 블록</Text><Text style={styles.monthSummaryText}>{[...new Set(monthBlocks.map((block) => block.dateKey))].length}일에 배치됨</Text></View><Calendar markingType="multi-dot" current={selectedDate} firstDay={1} onDayPress={(value) => onSelect(value.dateString)} onMonthChange={(value) => onSelect(`${value.year}-${String(value.month).padStart(2, '0')}-01`)} markedDates={markedDates} theme={{ calendarBackground: palette.bg, dayTextColor: palette.ink, monthTextColor: palette.ink, textMonthFontWeight: '700', textDayFontWeight: '600', arrowColor: palette.ink, todayTextColor: palette.ink, textDisabledColor: '#BDBDBD', textDayHeaderFontWeight: '700', textDayHeaderFontSize: font.xs }} /><View style={styles.monthAgenda}><View style={styles.monthAgendaHead}><View><Label>{selectedDate}</Label><Title>선택한 날</Title></View><Text style={styles.monthAgendaCount}>{selected.length}개</Text></View>{selected.length ? selected.map((block) => <View key={block.id} style={styles.monthBlock}><Text style={styles.monthBlockTime}>{formatClock(block.startMinute)}</Text><View style={[styles.monthBlockMark, { backgroundColor: accentFor(block).line }]} /><View style={styles.monthBlockText}><Text style={styles.timetableTitle}>{block.title}</Text><Sub>{formatClock(block.startMinute)}–{formatClock(block.endMinute)}</Sub></View></View>) : <Sub>등록한 일정이 없습니다. 빈 시간대를 눌러 추가할 수 있어요.</Sub>}</View></ScrollView>;
 }
 
 function WeekView({ selectedDate, blocks, onSelect, onOpenDay }: { selectedDate: string; blocks: ScheduleBlock[]; onSelect: (key: string) => void; onOpenDay: () => void }) {
@@ -128,7 +136,7 @@ function WeekView({ selectedDate, blocks, onSelect, onOpenDay }: { selectedDate:
       <View style={styles.weekBody}>
         {keys.map((key, index) => <View key={key} style={[styles.weekColumn, { left: WEEK_HOUR_WIDTH + index * dayWidth, width: dayWidth }]} />)}
         {Array.from({ length: 25 }, (_, index) => <View key={index} style={[styles.weekHourLine, { top: index * size.timelineHour, left: WEEK_HOUR_WIDTH }]}><Text style={[styles.weekHourLabel, { width: WEEK_HOUR_WIDTH }]}>{String(index).padStart(2, '0')}</Text></View>)}
-        {keys.map((key, column) => blocks.filter((block) => !block.deletedAt && block.dateKey === key).map((block) => <Pressable key={block.id} onPress={() => { setSelectedBlockId(block.id); onSelect(key); }} accessibilityRole="button" accessibilityState={{ selected: selectedBlockId === block.id }} accessibilityLabel={`${key} ${formatClock(block.startMinute)} ${block.title}`} style={[styles.weekBlock, selectedBlockId === block.id && styles.weekBlockSelected, { left: WEEK_HOUR_WIDTH + column * dayWidth + 1, width: dayWidth - 2, top: block.startMinute, height: Math.max(22, block.endMinute - block.startMinute) }]}><Text numberOfLines={1} style={[styles.weekBlockText, selectedBlockId === block.id && styles.weekBlockTextSelected]}>{block.title}</Text></Pressable>))}
+        {keys.map((key, column) => blocks.filter((block) => !block.deletedAt && block.dateKey === key).map((block) => { const accent = accentFor(block); return <Pressable key={block.id} onPress={() => { setSelectedBlockId(block.id); onSelect(key); }} accessibilityRole="button" accessibilityState={{ selected: selectedBlockId === block.id }} accessibilityLabel={`${key} ${formatClock(block.startMinute)} ${block.title}`} style={[styles.weekBlock, selectedBlockId === block.id && styles.weekBlockSelected, { borderColor: accent.line, backgroundColor: selectedBlockId === block.id ? accent.line : accent.fill, left: WEEK_HOUR_WIDTH + column * dayWidth + 1, width: dayWidth - 2, top: block.startMinute, height: Math.max(22, block.endMinute - block.startMinute) }]}><Text numberOfLines={1} style={[styles.weekBlockText, selectedBlockId === block.id && styles.weekBlockTextSelected]}>{block.title}</Text></Pressable>; }))}
       </View>
     </ScrollView>
     <View style={styles.weekDetail}>{selectedBlock ? <><View style={{ flex: 1, gap: 4 }}><Label>{selectedBlock.dateKey.slice(5)} · {formatClock(selectedBlock.startMinute)}–{formatClock(selectedBlock.endMinute)}</Label><Text numberOfLines={2} style={styles.timetableTitle}>{selectedBlock.title}</Text></View><Button label="하루 보기" tone="quiet" onPress={onOpenDay} /></> : <Sub>블록을 누르면 일정의 제목과 시간을 볼 수 있어요.</Sub>}</View>

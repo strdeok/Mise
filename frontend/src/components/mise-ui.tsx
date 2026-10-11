@@ -3,8 +3,16 @@ import { StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } fro
 import { font, radius, size, space } from '@/constants/layout';
 import { MotionPressable } from '@/components/motion';
 
-// Mise의 주방 도구처럼 선명한 대비를 위해 색 역할을 무채색으로 제한한다.
-export const palette = { bg: '#FAFAF9', card: '#FFFFFF', ink: '#111111', muted: '#686868', line: '#E4E4E2', green: '#111111', greenSoft: '#F0F0EE', orange: '#3D3D3D', red: '#2A2A2A' };
+// 기본은 흑백으로 유지하고, 시간과 상태를 빠르게 읽어야 하는 곳에만 절제된 색을 쓴다.
+export const palette = {
+  bg: '#FAFAF9', card: '#FFFFFF', ink: '#111111', muted: '#686868', line: '#E4E4E2',
+  green: '#111111', greenSoft: '#F0F0EE',
+  blue: '#4B76E8', blueSoft: '#EAF0FF',
+  mint: '#30A46C', mintSoft: '#EAF8F0',
+  purple: '#8C58D8', purpleSoft: '#F2EBFF',
+  orange: '#E8993A', orangeSoft: '#FFF1DF',
+  red: '#E34E4E', redSoft: '#FFF0EF',
+};
 export function Card({ children, style }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) { return <View style={[styles.card, style]}>{children}</View>; }
 export function SheetCard({ children, style }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) { return <View style={[styles.card, style, styles.sheet]}>{children}</View>; }
 export function Button({ label, onPress, tone = 'primary', disabled = false }: { label: string; onPress: () => void; tone?: 'primary' | 'quiet' | 'danger'; disabled?: boolean }) { return <MotionPressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress} style={[styles.button, tone === 'quiet' && styles.quiet, tone === 'danger' && styles.danger, disabled && styles.disabled]}><Text style={[styles.buttonText, tone === 'quiet' && styles.quietText]}>{label}</Text></MotionPressable>; }

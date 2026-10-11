@@ -29,19 +29,19 @@ const sector = (minutes: number) => {
 function Dial({ seconds, mode, paused, diameter, immersive = false }: { seconds: number; mode: 'countdown' | 'elapsed'; paused: boolean; diameter: number; immersive?: boolean }) {
   const minutes = Math.max(0, Math.min(60, seconds / 60));
   return <Svg width={diameter} height={diameter} viewBox={`0 0 ${SIZE} ${SIZE}`} accessibilityLabel={`${Math.ceil(minutes)}분 ${mode === 'countdown' ? '남음' : '경과'}`}>
-    <Circle cx={CENTER} cy={CENTER} r={immersive ? RADIUS - 17 : RADIUS} fill={immersive ? palette.greenSoft : palette.card} stroke={immersive ? 'none' : palette.line} strokeWidth="2" />
-    <Path d={sector(minutes)} fill={palette.ink} opacity={paused ? 0.38 : 1} />
+    <Circle cx={CENTER} cy={CENTER} r={immersive ? RADIUS - 17 : RADIUS} fill={immersive ? palette.bg : '#FFFDF9'} stroke={immersive ? 'none' : '#EEE8E0'} strokeWidth="2" />
+    <Path d={sector(minutes)} fill={palette.red} opacity={paused ? 0.3 : 1} />
     {Array.from({ length: 60 }, (_, index) => {
       const outer = polar(index * 6, RADIUS - 5);
       const inner = polar(index * 6, RADIUS - (index % 5 === 0 ? 17 : 11));
-      return <Line key={index} x1={outer.x} y1={outer.y} x2={inner.x} y2={inner.y} stroke={index % 5 === 0 ? palette.ink : palette.muted} strokeWidth={index % 5 === 0 ? 1.6 : 0.8} />;
+      return <Line key={index} x1={outer.x} y1={outer.y} x2={inner.x} y2={inner.y} stroke={index % 5 === 0 ? palette.ink : '#B8B5B0'} strokeWidth={index % 5 === 0 ? 1.6 : 0.8} />;
     })}
     {!immersive && [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((value) => {
       const point = polar(value * 6, RADIUS - 29);
       const overSector = minutes > 0 && (value === 0 || value <= minutes);
       return <SvgText key={value} x={point.x} y={point.y + 3} fill={overSector && !paused ? '#FFFFFF' : palette.muted} fontSize="10" fontWeight="600" textAnchor="middle">{value === 0 ? '60' : value}</SvgText>;
     })}
-    {immersive ? <><Line x1={CENTER} y1={CENTER} x2={polar(minutes * 6, RADIUS - 9).x} y2={polar(minutes * 6, RADIUS - 9).y} stroke={palette.ink} strokeWidth="2" strokeLinecap="round" /><Circle cx={CENTER} cy={CENTER} r="9" fill={palette.card} stroke={palette.ink} strokeWidth="3" /></> : <><Circle cx={CENTER} cy={CENTER} r="25" fill="#FFFFFF" stroke={palette.ink} strokeWidth="2" /><Circle cx={CENTER} cy={CENTER} r="16" fill={palette.ink} /><Line x1={CENTER} y1={CENTER} x2={CENTER + 8} y2={CENTER - 8} stroke="#FFF" strokeWidth="2" strokeLinecap="round" /></>}
+    {immersive ? <><Line x1={CENTER} y1={CENTER} x2={polar(minutes * 6, RADIUS - 9).x} y2={polar(minutes * 6, RADIUS - 9).y} stroke={palette.ink} strokeWidth="2" strokeLinecap="round" /><Circle cx={CENTER} cy={CENTER} r="9" fill="#F3EEE7" stroke={palette.ink} strokeWidth="3" /></> : <><Circle cx={CENTER + 3} cy={CENTER + 5} r="34" fill="#D7D0C7" opacity="0.38" /><Circle cx={CENTER} cy={CENTER} r="31" fill="#F3EEE7" stroke="#E1D9D0" strokeWidth="2" /><Circle cx={CENTER} cy={CENTER} r="18" fill="#EED8BB" /><Line x1={CENTER} y1={CENTER} x2={CENTER + 9} y2={CENTER - 8} stroke="#A96D35" strokeWidth="2" strokeLinecap="round" /></>}
   </Svg>;
 }
 
@@ -172,12 +172,8 @@ export default function Timer() {
     if (Platform.OS === 'web') { if (window.confirm('1분 미만의 기록을 저장할까요?')) finish('actual'); else dismiss(); return; }
     Alert.alert('1분 미만', '기록을 저장할까요?', [{ text: '폐기', style: 'destructive', onPress: dismiss }, { text: '저장', onPress: () => finish('actual') }]);
   };
-  const primaryControl = session.status === 'ready'
-    ? <Button label="시작" onPress={begin} />
-    : session.status === 'running'
-      ? <Button label="일시정지" tone="quiet" onPress={pause} />
-      : <Button label="재개" onPress={resume} />;
-  const dial = (diameter: number) => <View style={[s.clockCase, { width: diameter + 20, height: diameter + 20 }]}><Dial seconds={shown} mode={settings.timerMode} paused={session.status === 'paused'} diameter={diameter} /></View>;
+  const primaryControl = <Pressable accessibilityRole="button" accessibilityLabel={session.status === 'ready' ? '시작' : session.status === 'running' ? '일시정지' : '재개'} onPress={session.status === 'ready' ? begin : session.status === 'running' ? pause : resume} style={s.roundPrimary}><Text style={s.roundPrimaryText}>{session.status === 'running' ? 'Ⅱ' : '▶'}</Text><Text style={s.roundPrimaryLabel}>{session.status === 'ready' ? '시작' : session.status === 'running' ? '일시정지' : '재개'}</Text></Pressable>;
+  const dial = (diameter: number) => <View style={s.dialWrap}><Dial seconds={shown} mode={settings.timerMode} paused={session.status === 'paused'} diameter={diameter} /></View>;
   const targetChoices = reached && !session.continuedPastTargetAt && <Card style={s.reached}><Title>목표 시간에 도달했어요</Title><Sub>지금까지의 목표만 저장하거나 계속 기록할 수 있어요.</Sub><View style={s.actions}><Button label="목표 저장" onPress={() => finish('target')} /><Button label="계속 기록" tone="quiet" onPress={continuePastTarget} /></View></Card>;
 
   if (fullScreen) return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.fullWrap}>
@@ -198,7 +194,7 @@ export default function Timer() {
     <View style={s.meta}><Text style={s.metaText}>목표 {Math.round(session.targetSeconds / 60)}분</Text><Text style={s.dot}>·</Text><Text style={s.metaText}>{session.status === 'ready' ? '시작 버튼을 누르면 기록됩니다' : reached ? `+${Math.floor((elapsed - session.targetSeconds) / 60)}분 초과` : `${Math.max(0, Math.ceil((session.targetSeconds - elapsed) / 60))}분 남음`}</Text></View>
     {targetChoices}
     {reached && session.continuedPastTargetAt && <Sub>목표 시간을 넘겨 계속 기록 중입니다.</Sub>}
-    <View style={s.actions}><View style={s.control}>{primaryControl}</View>{session.status !== 'ready' && <View style={s.control}><Button label="완료" onPress={confirmComplete} /></View>}</View>
+    <View style={s.actions}><View style={s.control}>{primaryControl}</View>{session.status !== 'ready' && <Pressable accessibilityRole="button" accessibilityLabel="완료" onPress={confirmComplete} style={s.roundSecondary}><Text style={s.roundSecondaryText}>완료</Text></Pressable>}</View>
     <View style={s.utility}>{session.status !== 'ready' && <Pressable onPress={() => { setMinutes(String(Math.max(1, Math.round(elapsed / 60)))); setManual(true); }}><Text style={s.utilityText}>시간 직접 수정</Text></Pressable>}<Pressable onPress={confirmDiscard}><Text style={s.utilityText}>{session.status === 'ready' ? '취소' : '폐기'}</Text></Pressable></View>
     <Modal visible={manual} transparent animationType="slide" onRequestClose={() => setManual(false)}><SafeAreaSheet><SheetCard style={s.modal}><Title>실제 기록 시간</Title><Sub>측정 시간은 {formatDuration(elapsed)}입니다. 1분에서 24시간 사이로 수정할 수 있어요.</Sub><Field value={minutes} onChangeText={setMinutes} placeholder="분" /><View style={s.actions}><Button label="취소" tone="quiet" onPress={() => setManual(false)} /><Button label="저장" onPress={() => { const value = Number(minutes); if (!Number.isFinite(value) || value < 1 || value > 1440) return; setManual(false); finish('manual', Math.round(value) * 60); }} /></View></SheetCard></SafeAreaSheet></Modal>
   </ScrollView>{settingsSheet}</SafeAreaView>;
@@ -239,14 +235,19 @@ const s = StyleSheet.create({
   cycleDot: { minHeight: 25, paddingHorizontal: 9, borderRadius: 999, backgroundColor: palette.greenSoft, alignItems: 'center', justifyContent: 'center' },
   cycleDotActive: { backgroundColor: palette.ink }, cycleText: { color: palette.muted, fontSize: 9, fontWeight: '800', letterSpacing: .4 }, cycleTextActive: { color: '#fff' }, cycleArrow: { color: palette.muted, fontSize: 14 }, cycleRule: { width: '100%', color: palette.muted, fontSize: 11, fontWeight: '600' },
   clock: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 250, gap: 5, paddingVertical: 8 },
-  clockCase: { alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: '#F1F1EF', borderWidth: 1, borderColor: palette.line, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 3 },
+  dialWrap: { alignItems: 'center', justifyContent: 'center' },
   time: { marginTop: 14, fontSize: 46, letterSpacing: -2.2, fontWeight: '600', color: palette.ink, fontVariant: ['tabular-nums'] },
   caption: { color: palette.muted, fontSize: 12, fontWeight: '500', letterSpacing: .4 },
   meta: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7 },
   metaText: { color: palette.muted, fontSize: 12, fontWeight: '500' },
   dot: { color: palette.muted },
-  actions: { flexDirection: 'row', gap: 10 },
-  control: { flex: 1 },
+  actions: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 18 },
+  control: { alignItems: 'center', justifyContent: 'center' },
+  roundPrimary: { width: 82, height: 82, borderRadius: 41, backgroundColor: palette.ink, alignItems: 'center', justifyContent: 'center', gap: 1, shadowColor: '#000', shadowOpacity: .14, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 4 },
+  roundPrimaryText: { color: '#fff', fontSize: 20, lineHeight: 22, fontWeight: '700' },
+  roundPrimaryLabel: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  roundSecondary: { width: 68, height: 68, borderRadius: 34, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.card, alignItems: 'center', justifyContent: 'center' },
+  roundSecondaryText: { color: palette.ink, fontSize: 12, fontWeight: '700' },
   utility: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 8 },
   utilityText: { color: palette.muted, fontSize: 13, fontWeight: '600', paddingVertical: 8 },
   reached: { gap: 9 },
