@@ -12,6 +12,7 @@ export const normalizeStoredData = (stored: StoredAppData): AppData => {
   const categoryIds = new Set(categories.map((category) => category.id));
   return {
     ...stored,
+    settings: { ...stored.settings, longBreakInterval: stored.settings.longBreakInterval ?? 4 },
     categories,
     todos: stored.todos.map((todo) => ({ ...todo, categoryId: todo.categoryId && categoryIds.has(todo.categoryId) ? todo.categoryId : null })),
   };

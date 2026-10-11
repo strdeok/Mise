@@ -6,8 +6,8 @@ import type { AppData, CompletionMode, ScheduleBlock, Session, SessionType, Sett
 type MiseStore = AppData & {
   hydrated: boolean; error: string | null;
   hydrate: () => Promise<void>; reset: () => Promise<void>;
-  addTodo: (title: string, parentId?: string | null, today?: boolean, categoryId?: string | null) => Promise<boolean>;
-  updateTodo: (id: string, input: { title: string; parentId: string | null; categoryId: string | null }) => Promise<boolean>; archiveTodo: (id: string, archived: boolean) => Promise<void>; reorderTodo: (id: string, direction: -1 | 1) => Promise<void>;
+  addTodo: (title: string, parentId?: string | null, today?: boolean, categoryId?: string | null, dateKeys?: string[]) => Promise<boolean>;
+  updateTodo: (id: string, input: { title: string; parentId: string | null; categoryId: string | null; todayDateKeys?: string[] }) => Promise<boolean>; archiveTodo: (id: string, archived: boolean) => Promise<void>; reorderTodo: (id: string, direction: -1 | 1) => Promise<void>;
   saveCategory: (name: string, categoryId?: string) => Promise<string | null>;
   deleteCategory: (categoryId: string) => Promise<void>;
   toggleTodo: (id: string) => Promise<void>; toggleToday: (id: string, key: string) => Promise<void>; deleteTodo: (id: string) => Promise<boolean>;
@@ -20,7 +20,7 @@ type MiseStore = AppData & {
 };
 
 const id = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-const initial: AppData = { todos: [], categories: [], blocks: [], sessions: [], settings: { defaultFocusMinutes: 25, shortBreakMinutes: 5, longBreakMinutes: 15, timerMode: 'countdown', focusNotificationEnabled: true, breakNotificationEnabled: true } };
+const initial: AppData = { todos: [], categories: [], blocks: [], sessions: [], settings: { defaultFocusMinutes: 25, shortBreakMinutes: 5, longBreakMinutes: 15, longBreakInterval: 4, timerMode: 'countdown', focusNotificationEnabled: true, breakNotificationEnabled: true } };
 
 export const useMiseStore = create<MiseStore>((set, get) => {
   const save = async (data: AppData) => { set(data); await localRepository.save(data); };
@@ -28,14 +28,14 @@ export const useMiseStore = create<MiseStore>((set, get) => {
     ...initial, hydrated: false, error: null,
     hydrate: async () => { try { set({ ...(await localRepository.load()), hydrated: true, error: null }); } catch { set({ hydrated: true, error: '저장된 데이터를 불러오지 못했습니다.' }); } },
     reset: async () => { const data = await localRepository.reset(); set(data); },
-    addTodo: async (title, parentId = null, today = true, categoryId = null) => {
+    addTodo: async (title, parentId = null, today = true, categoryId = null, dateKeys) => {
       const state = get(); const trimmed = title.trim();
       if (!trimmed) { set({ error: '할 일 제목을 입력해 주세요.' }); return false; }
       if (parentId && !state.todos.some((todo) => todo.id === parentId && !todo.archivedAt)) { set({ error: '상위 Todo를 찾을 수 없습니다.' }); return false; }
       if (todoDepth(parentId, state.todos) > 2) { set({ error: 'Todo는 3단계까지만 만들 수 있습니다.' }); return false; }
       if (categoryId && !state.categories.some((category) => category.id === categoryId)) { set({ error: '카테고리를 찾을 수 없습니다.' }); return false; }
       const siblings = state.todos.filter((todo) => todo.parentId === parentId);
-      await save({ ...state, todos: [...state.todos, { id: id(), title: trimmed, parentId, categoryId, status: 'open', order: siblings.length, todayDateKeys: today ? [dateKey()] : [] }] }); return true;
+      await save({ ...state, todos: [...state.todos, { id: id(), title: trimmed, parentId, categoryId, status: 'open', order: siblings.length, todayDateKeys: today ? (dateKeys ?? [dateKey()]) : [] }] }); return true;
     },
     updateTodo: async (todoId, input) => {
       const state = get(); const current = state.todos.find((todo) => todo.id === todoId); const title = input.title.trim(); if (!current || !title) { set({ error: '할 일 제목을 입력해 주세요.' }); return false; }
@@ -44,7 +44,7 @@ export const useMiseStore = create<MiseStore>((set, get) => {
       if (todoDepth(input.parentId, state.todos) > 2) { set({ error: 'Todo는 3단계까지만 만들 수 있습니다.' }); return false; }
       if (input.categoryId && !state.categories.some((category) => category.id === input.categoryId)) { set({ error: '카테고리를 찾을 수 없습니다.' }); return false; }
       const order = current.parentId === input.parentId ? current.order : state.todos.filter((todo) => todo.parentId === input.parentId).length;
-      await save({ ...state, todos: state.todos.map((todo) => todo.id === todoId ? { ...todo, title, parentId: input.parentId, categoryId: input.categoryId, order } : todo) }); return true;
+      await save({ ...state, todos: state.todos.map((todo) => todo.id === todoId ? { ...todo, title, parentId: input.parentId, categoryId: input.categoryId, todayDateKeys: input.todayDateKeys ?? todo.todayDateKeys, order } : todo) }); return true;
     },
     saveCategory: async (name, categoryId) => {
       const state = get(); const trimmed = name.trim();
@@ -99,7 +99,16 @@ export const useMiseStore = create<MiseStore>((set, get) => {
     resume: async () => { const state = get(); const current = activeSession(state.sessions); if (!current || current.status !== 'paused') return; await save({ ...state, sessions: state.sessions.map((session) => session.id === current.id ? { ...session, status: 'running', lastResumedAt: Date.now() } : session) }); },
     continuePastTarget: async () => { const state = get(); const current = activeSession(state.sessions); if (!current || elapsedSeconds(current) < current.targetSeconds || current.continuedPastTargetAt) return; await save({ ...state, sessions: state.sessions.map((session) => session.id === current.id ? { ...session, continuedPastTargetAt: Date.now() } : session) }); },
     complete: async (mode, manualSeconds) => { const state = get(); const current = activeSession(state.sessions); if (!current || current.status === 'ready') return; const now = Date.now(); const measured = elapsedSeconds(current, now); const recorded = mode === 'target' ? current.targetSeconds : mode === 'manual' ? Math.max(60, Math.min(86400, manualSeconds ?? measured)) : measured; await save({ ...state, sessions: state.sessions.map((session) => session.id === current.id ? { ...session, status: 'completed', accumulatedSeconds: measured, lastResumedAt: null, completedAt: now, measuredSeconds: measured, recordedSeconds: recorded, completionMode: mode } : session) }); },
-    discard: async () => { const state = get(); const current = activeSession(state.sessions); if (!current) return; await save({ ...state, sessions: state.sessions.map((session) => session.id === current.id ? { ...session, status: 'discarded', lastResumedAt: null, completedAt: Date.now() } : session) }); },
-    updateSettings: async (patch) => { const state = get(); await save({ ...state, settings: { ...state.settings, ...patch } }); },
+    discard: async () => { const state = get(); const current = activeSession(state.sessions); if (!current) return; await save({ ...state, sessions: state.sessions.filter((session) => session.id !== current.id) }); },
+    updateSettings: async (patch) => {
+      const state = get();
+      const settings = { ...state.settings, ...patch };
+      const sessions = state.sessions.map((session) => {
+        if (session.status !== 'ready') return session;
+        const minutes = session.type === 'focus' ? settings.defaultFocusMinutes : session.type === 'short_break' ? settings.shortBreakMinutes : settings.longBreakMinutes;
+        return { ...session, targetSeconds: minutes * 60 };
+      });
+      await save({ ...state, settings, sessions });
+    },
   };
 });

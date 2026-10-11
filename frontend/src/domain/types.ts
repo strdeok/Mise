@@ -64,6 +64,7 @@ export type Settings = {
   defaultFocusMinutes: number;
   shortBreakMinutes: number;
   longBreakMinutes: number;
+  longBreakInterval?: number;
   timerMode: 'countdown' | 'elapsed';
   focusNotificationEnabled: boolean;
   breakNotificationEnabled: boolean;

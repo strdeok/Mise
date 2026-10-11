@@ -4,7 +4,7 @@ import type { AppData, Settings } from '@/domain/types';
 import { normalizeStoredData } from './normalize';
 
 const key = 'mise-table.local-data.v1';
-const settings: Settings = { defaultFocusMinutes: 25, shortBreakMinutes: 5, longBreakMinutes: 15, timerMode: 'countdown', focusNotificationEnabled: true, breakNotificationEnabled: true };
+const settings: Settings = { defaultFocusMinutes: 25, shortBreakMinutes: 5, longBreakMinutes: 15, longBreakInterval: 4, timerMode: 'countdown', focusNotificationEnabled: true, breakNotificationEnabled: true };
 export const fixture = (): AppData => {
   const today = dateKey();
   const now = Date.now();
