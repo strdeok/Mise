@@ -1,7 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { font, size } from '@/constants/layout';
 import { palette } from '@/components/mise-ui';
+import { MotionPressable } from '@/components/motion';
 
 export type Tab = 'today' | 'todos' | 'schedule' | 'stats' | 'settings';
 
@@ -38,10 +39,10 @@ export function BottomTabs({ value, onChange }: { value: Tab; onChange: (tab: Ta
   return <View style={styles.bar} accessibilityRole="tablist">
     {tabs.map(({ id, label }) => {
       const selected = value === id;
-      return <Pressable key={id} accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{ selected }} onPress={() => onChange(id)} style={styles.tab}>
+      return <MotionPressable key={id} accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{ selected }} pressedScale={0.95} onPress={() => onChange(id)} style={styles.tab}>
         <TabIcon id={id} selected={selected} />
         <Text style={[styles.label, selected && styles.selected]}>{label}</Text>
-      </Pressable>;
+      </MotionPressable>;
     })}
   </View>;
 }
