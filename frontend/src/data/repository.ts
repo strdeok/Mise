@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dateKey } from '@/domain/logic';
 import type { AppData, Settings } from '@/domain/types';
+import { normalizeStoredData } from './normalize';
 
 const key = 'mise-table.local-data.v1';
 const settings: Settings = { defaultFocusMinutes: 25, shortBreakMinutes: 5, longBreakMinutes: 15, timerMode: 'countdown', focusNotificationEnabled: true, breakNotificationEnabled: true };
@@ -9,10 +10,11 @@ export const fixture = (): AppData => {
   const now = Date.now();
   return {
     todos: [
-      { id: 'project', title: 'Mise Table', parentId: null, status: 'open', order: 0, todayDateKeys: [today] },
-      { id: 'timer', title: '타이머 화면 구현', parentId: 'project', status: 'open', order: 0, todayDateKeys: [today] },
-      { id: 'stats', title: '통계 카드 정리', parentId: 'project', status: 'open', order: 1, todayDateKeys: [today] },
+      { id: 'project', title: 'Mise Table', parentId: null, categoryId: null, status: 'open', order: 0, todayDateKeys: [today] },
+      { id: 'timer', title: '타이머 화면 구현', parentId: 'project', categoryId: null, status: 'open', order: 0, todayDateKeys: [today] },
+      { id: 'stats', title: '통계 카드 정리', parentId: 'project', categoryId: null, status: 'open', order: 1, todayDateKeys: [today] },
     ],
+    categories: [],
     blocks: [
       { id: 'block-1', dateKey: today, startMinute: 9 * 60, endMinute: 10 * 60, title: '타이머 화면 구현', todoId: 'timer', deletedAt: null },
       { id: 'block-2', dateKey: today, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 15, title: '통계 카드 정리', todoId: 'stats', deletedAt: null },
@@ -21,8 +23,9 @@ export const fixture = (): AppData => {
     settings,
   };
 };
+
 export const localRepository = {
-  async load(): Promise<AppData> { const raw = await AsyncStorage.getItem(key); return raw ? JSON.parse(raw) as AppData : fixture(); },
+  async load(): Promise<AppData> { const raw = await AsyncStorage.getItem(key); return raw ? normalizeStoredData(JSON.parse(raw) as AppData) : fixture(); },
   async save(data: AppData) { await AsyncStorage.setItem(key, JSON.stringify(data)); },
   async reset() { const data = fixture(); await this.save(data); return data; },
 };

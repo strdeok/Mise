@@ -33,6 +33,7 @@ MVP에는 로그인 제공자 연결·해제 API를 두지 않는다. 한 내부
 | --- | --- | --- |
 | Auth | OAuth 시작·콜백·최근 인증 확인 경로 **설계 대기**, `POST /auth/refresh`, `POST /auth/logout`, `GET /users/me`, `DELETE /users/me` | 제공자 로그인·내부 토큰 갱신·로그아웃·현재 사용자·계정 삭제. 이메일·비밀번호 `signup/login` 경로는 사용하지 않음 |
 | Todo | `GET /todos`, `POST /todos`, `GET /todos/:id`, `PATCH /todos/:id`, `DELETE /todos/:id`, `PATCH /todos/:id/complete` | 목록·상세·생성·수정·트리 hard delete·완료 전환 |
+| Todo category | `GET /categories`, `POST /categories`, `PATCH /categories/:id`, `DELETE /categories/:id` | 본인 카테고리 목록·생성·이름 변경·삭제 |
 | Today | `PATCH /todos/:id/days` | Body의 날짜에 Todo를 포함·해제 |
 | Schedule | `GET /schedule?date=YYYY-MM-DD`, `POST /schedule`, `PATCH /schedule/:id`, `DELETE /schedule/:id` | Day View·블록 CRUD |
 | Session | `GET /sessions/active`, `POST /sessions/focus`, `POST /sessions/break`, `POST /sessions/:id/pause`, `POST /sessions/:id/resume`, `POST /sessions/:id/continue`, `POST /sessions/:id/complete`, `POST /sessions/:id/discard`, `GET /sessions` | 활성·시작·전이·목표 이후 계속 기록·기록 |
@@ -40,6 +41,8 @@ MVP에는 로그인 제공자 연결·해제 API를 두지 않는다. 한 내부
 | Settings | `GET /settings`, `PATCH /settings` | 설정 조회·변경 |
 
 ## 계약 작성 시 필수 필드
+
+Todo 생성·수정 Body의 `categoryId`는 본인 소유 카테고리 ID 또는 null이다. null이면 미분류로 등록한다. 카테고리는 이름이 필수이며 사용자 안에서 대소문자 구분 없이 고유하다. `DELETE /categories/:id`는 연결된 Todo를 미분류로 바꾸고 `204`를 반환한다. Todo와 Session은 유지한다.
 
 Schedule Block 생성·수정 Body는 `date: YYYY-MM-DD`, `startAt`·`endAt`: UTC 오프셋을 포함한 RFC 3339 시각, `timezoneId`: IANA 시간대 이름을 사용한다. 서버는 시간대·오프셋·현지 날짜의 일치와 현지 5분 단위, 5분 이상, 자정 넘김 금지를 검증한다. `DELETE /schedule/:id`는 블록을 soft delete하고 `204`를 반환한다.
 

@@ -7,11 +7,14 @@ export type Todo = {
   id: string;
   title: string;
   parentId: string | null;
+  categoryId: string | null;
   status: TodoStatus;
   order: number;
   todayDateKeys: string[];
   archivedAt?: number | null;
 };
+
+export type TodoCategory = { id: string; name: string; order: number };
 
 export type ScheduleBlock = {
   id: string;
@@ -66,4 +69,4 @@ export type Settings = {
   breakNotificationEnabled: boolean;
 };
 
-export type AppData = { todos: Todo[]; blocks: ScheduleBlock[]; sessions: Session[]; settings: Settings };
+export type AppData = { todos: Todo[]; categories: TodoCategory[]; blocks: ScheduleBlock[]; sessions: Session[]; settings: Settings };

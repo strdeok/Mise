@@ -6,8 +6,10 @@ import type { AppData, CompletionMode, ScheduleBlock, Session, SessionType, Sett
 type MiseStore = AppData & {
   hydrated: boolean; error: string | null;
   hydrate: () => Promise<void>; reset: () => Promise<void>;
-  addTodo: (title: string, parentId?: string | null, today?: boolean) => Promise<void>;
-  updateTodo: (id: string, input: { title: string; parentId: string | null }) => Promise<boolean>; archiveTodo: (id: string, archived: boolean) => Promise<void>; reorderTodo: (id: string, direction: -1 | 1) => Promise<void>;
+  addTodo: (title: string, parentId?: string | null, today?: boolean, categoryId?: string | null) => Promise<boolean>;
+  updateTodo: (id: string, input: { title: string; parentId: string | null; categoryId: string | null }) => Promise<boolean>; archiveTodo: (id: string, archived: boolean) => Promise<void>; reorderTodo: (id: string, direction: -1 | 1) => Promise<void>;
+  saveCategory: (name: string, categoryId?: string) => Promise<string | null>;
+  deleteCategory: (categoryId: string) => Promise<void>;
   toggleTodo: (id: string) => Promise<void>; toggleToday: (id: string, key: string) => Promise<void>; deleteTodo: (id: string) => Promise<boolean>;
   saveBlock: (input: Omit<ScheduleBlock, 'id' | 'deletedAt'> & { id?: string }) => Promise<string | null>;
   deleteBlock: (id: string) => Promise<void>;
@@ -18,7 +20,7 @@ type MiseStore = AppData & {
 };
 
 const id = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-const initial: AppData = { todos: [], blocks: [], sessions: [], settings: { defaultFocusMinutes: 25, shortBreakMinutes: 5, longBreakMinutes: 15, timerMode: 'countdown', focusNotificationEnabled: true, breakNotificationEnabled: true } };
+const initial: AppData = { todos: [], categories: [], blocks: [], sessions: [], settings: { defaultFocusMinutes: 25, shortBreakMinutes: 5, longBreakMinutes: 15, timerMode: 'countdown', focusNotificationEnabled: true, breakNotificationEnabled: true } };
 
 export const useMiseStore = create<MiseStore>((set, get) => {
   const save = async (data: AppData) => { set(data); await localRepository.save(data); };
@@ -26,21 +28,36 @@ export const useMiseStore = create<MiseStore>((set, get) => {
     ...initial, hydrated: false, error: null,
     hydrate: async () => { try { set({ ...(await localRepository.load()), hydrated: true, error: null }); } catch { set({ hydrated: true, error: '저장된 데이터를 불러오지 못했습니다.' }); } },
     reset: async () => { const data = await localRepository.reset(); set(data); },
-    addTodo: async (title, parentId = null, today = true) => {
+    addTodo: async (title, parentId = null, today = true, categoryId = null) => {
       const state = get(); const trimmed = title.trim();
-      if (!trimmed) return set({ error: '할 일 제목을 입력해 주세요.' });
-      if (parentId && !state.todos.some((todo) => todo.id === parentId && !todo.archivedAt)) return set({ error: '상위 Todo를 찾을 수 없습니다.' });
-      if (todoDepth(parentId, state.todos) > 2) return set({ error: 'Todo는 3단계까지만 만들 수 있습니다.' });
+      if (!trimmed) { set({ error: '할 일 제목을 입력해 주세요.' }); return false; }
+      if (parentId && !state.todos.some((todo) => todo.id === parentId && !todo.archivedAt)) { set({ error: '상위 Todo를 찾을 수 없습니다.' }); return false; }
+      if (todoDepth(parentId, state.todos) > 2) { set({ error: 'Todo는 3단계까지만 만들 수 있습니다.' }); return false; }
+      if (categoryId && !state.categories.some((category) => category.id === categoryId)) { set({ error: '카테고리를 찾을 수 없습니다.' }); return false; }
       const siblings = state.todos.filter((todo) => todo.parentId === parentId);
-      await save({ ...state, todos: [...state.todos, { id: id(), title: trimmed, parentId, status: 'open', order: siblings.length, todayDateKeys: today ? [dateKey()] : [] }] });
+      await save({ ...state, todos: [...state.todos, { id: id(), title: trimmed, parentId, categoryId, status: 'open', order: siblings.length, todayDateKeys: today ? [dateKey()] : [] }] }); return true;
     },
     updateTodo: async (todoId, input) => {
       const state = get(); const current = state.todos.find((todo) => todo.id === todoId); const title = input.title.trim(); if (!current || !title) { set({ error: '할 일 제목을 입력해 주세요.' }); return false; }
       const tree = descendants(todoId, state.todos); if (input.parentId && tree.has(input.parentId)) { set({ error: '자기 자신 또는 하위 Todo 아래로 이동할 수 없습니다.' }); return false; }
       if (input.parentId && !state.todos.some((todo) => todo.id === input.parentId && !todo.archivedAt)) { set({ error: '상위 Todo를 찾을 수 없습니다.' }); return false; }
       if (todoDepth(input.parentId, state.todos) > 2) { set({ error: 'Todo는 3단계까지만 만들 수 있습니다.' }); return false; }
+      if (input.categoryId && !state.categories.some((category) => category.id === input.categoryId)) { set({ error: '카테고리를 찾을 수 없습니다.' }); return false; }
       const order = current.parentId === input.parentId ? current.order : state.todos.filter((todo) => todo.parentId === input.parentId).length;
-      await save({ ...state, todos: state.todos.map((todo) => todo.id === todoId ? { ...todo, title, parentId: input.parentId, order } : todo) }); return true;
+      await save({ ...state, todos: state.todos.map((todo) => todo.id === todoId ? { ...todo, title, parentId: input.parentId, categoryId: input.categoryId, order } : todo) }); return true;
+    },
+    saveCategory: async (name, categoryId) => {
+      const state = get(); const trimmed = name.trim();
+      if (!trimmed) { set({ error: '카테고리 이름을 입력해 주세요.' }); return null; }
+      if (state.categories.some((category) => category.id !== categoryId && category.name.toLocaleLowerCase() === trimmed.toLocaleLowerCase())) { set({ error: '같은 이름의 카테고리가 있습니다.' }); return null; }
+      if (categoryId && !state.categories.some((category) => category.id === categoryId)) { set({ error: '카테고리를 찾을 수 없습니다.' }); return null; }
+      const nextId = categoryId ?? id();
+      await save({ ...state, categories: categoryId ? state.categories.map((category) => category.id === categoryId ? { ...category, name: trimmed } : category) : [...state.categories, { id: nextId, name: trimmed, order: state.categories.length }] });
+      return nextId;
+    },
+    deleteCategory: async (categoryId) => {
+      const state = get(); if (!state.categories.some((category) => category.id === categoryId)) return;
+      await save({ ...state, categories: state.categories.filter((category) => category.id !== categoryId), todos: state.todos.map((todo) => todo.categoryId === categoryId ? { ...todo, categoryId: null } : todo) });
     },
     archiveTodo: async (todoId, archived) => { const state = get(); const tree = descendants(todoId, state.todos); await save({ ...state, todos: state.todos.map((todo) => tree.has(todo.id) ? { ...todo, archivedAt: archived ? Date.now() : null } : todo) }); },
     reorderTodo: async (todoId, direction) => { const state = get(); const current = state.todos.find((todo) => todo.id === todoId); if (!current) return; const siblings = state.todos.filter((todo) => todo.parentId === current.parentId && !todo.archivedAt).sort((a, b) => a.order - b.order); const index = siblings.findIndex((todo) => todo.id === todoId); const target = siblings[index + direction]; if (!target) return; await save({ ...state, todos: state.todos.map((todo) => todo.id === current.id ? { ...todo, order: target.order } : todo.id === target.id ? { ...todo, order: current.order } : todo) }); },

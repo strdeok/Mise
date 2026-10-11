@@ -3,7 +3,7 @@ import { aggregateStats } from '@/domain/statistics';
 import type { ScheduleBlock, Session, Todo } from '@/domain/types';
 
 const period = { startDate: '2026-10-05', endDate: '2026-10-11', label: '검증 기간' };
-const todo: Todo = { id: 'todo', title: '통계 작업', parentId: null, status: 'open', order: 0, todayDateKeys: [] };
+const todo: Todo = { id: 'todo', title: '통계 작업', parentId: null, categoryId: null, status: 'open', order: 0, todayDateKeys: [] };
 const completeFocus = (input: Partial<Session> = {}): Session => ({ id: 'focus', type: 'focus', status: 'completed', todoId: 'todo', scheduleBlockId: null, targetSeconds: 1500, accumulatedSeconds: 1800, lastResumedAt: null, startedAt: 0, completedAt: 1, measuredSeconds: 1800, recordedSeconds: 1800, completionMode: 'actual', targetReachedNotified: true, continuedPastTargetAt: null, localStartDate: '2026-10-06', timezoneId: 'Asia/Seoul', utcOffsetMinutes: 540, todoSnapshot: { title: '통계 작업', path: ['통계 작업'] }, todoStatsPathSnapshot: null, scheduleSnapshot: null, excludedFromStatsAt: null, ...input });
 
 describe('통계 집계', () => {
