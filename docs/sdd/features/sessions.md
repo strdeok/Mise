@@ -4,7 +4,7 @@
 
 ## 시나리오와 입출력
 
-Today의 Todo, Todo 상세, Schedule Block에서 Focus를 시작한다. Focus는 Todo 필수, 목표 시간 선택 가능하며 기본 25분이다. Schedule에서 시작하면 Block ID를 저장한다. Break는 Todo 없이 직접 시작하거나 Focus 완료 후 선택할 수 있고 기본값은 Short 5분, Long 15분이다.
+Today의 Todo, Todo 상세, Schedule Block에서 Focus를 시작한다. Focus는 Todo 필수, 목표 시간 선택 가능하며 기본 25분이다. Schedule에서 시작하면 Block ID를 저장한다. Break는 Todo 없이 Focus 완료 후 전환 화면에서 시작한다. 홈에는 독립적인 Break 시작 버튼을 두지 않는다. 기본값은 Short 5분, Long 15분이다.
 
 Todo가 연결되지 않은 Schedule Block에서 Focus를 시작할 때는 App이 Todo 선택을 요청한다. 선택이 완료되면 서버가 해당 블록에 Todo를 연결하고 Session을 생성한다. 사용자가 선택을 취소하면 블록과 Session을 변경하지 않는다.
 

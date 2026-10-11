@@ -45,7 +45,6 @@ function Today({ addTodo, openTodo }: { addTodo: () => void; openTodo: (todo: To
     <View style={s.focusPanel}><Label>오늘 집중한 시간</Label><Text style={s.focusNumber}>{formatDuration(seconds)}</Text><View style={s.focusDivider} /><Text style={s.nextLabel}>다음 일정</Text><Text style={s.nextValue}>{next ? `${formatClock(next.startMinute)}  ${next.title}` : '예정된 일정이 없습니다.'}</Text></View>
     <View style={s.sectionHead}><Text style={s.sectionTitle}>오늘 할 일 <Text style={s.count}>{listed.length}</Text></Text><Pressable onPress={addTodo} style={s.textAction}><Text style={s.textActionLabel}>+ 추가</Text></Pressable></View>
     <View style={s.flatList}>{listed.map((todo) => <View key={todo.id} style={s.flatTodoRow}><Pressable accessibilityLabel={`${todo.title} 완료 전환`} onPress={() => toggle(todo.id)} style={[s.check, todo.status === 'completed' && s.checked]}>{todo.status === 'completed' && <Text style={{color:'#fff'}}>✓</Text>}</Pressable><Pressable style={s.flex} onPress={() => openTodo(todo)}><Text style={[s.todoTitle, todo.status === 'completed' && s.done]}>{todo.title}</Text><Sub>{todo.parentId ? '하위 Todo' : '프로젝트'}</Sub></Pressable><Pressable style={s.focusAction} onPress={() => start('focus', todo.id).then((sessionId) => sessionId && router.push('/timer'))}><Text style={s.focusActionText}>집중 ›</Text></Pressable><Pressable hitSlop={10} onPress={() => Alert.alert('Todo 메뉴', todo.title, [{text:'오늘에서 제외', onPress:()=>toggleToday(todo.id,key)},{text:'삭제',style:'destructive',onPress:()=>remove(todo.id)},{text:'취소',style:'cancel'}])}><Text style={s.menu}>···</Text></Pressable></View>)}{!listed.length && <Text style={s.emptyLine}>오늘 할 일이 없습니다. 할 일을 추가해 보세요.</Text>}</View>
-    <Pressable style={s.breakAction} onPress={() => start('short_break').then((sessionId) => sessionId && router.push('/timer'))}><Text style={s.breakActionText}>휴식 시작</Text><Text style={s.breakArrow}>›</Text></Pressable>
   </ScrollView>;
 }
 
@@ -147,9 +146,6 @@ const s = StyleSheet.create({ safe:{flex:1,backgroundColor:palette.bg},app:{flex
   focusAction:{minHeight:size.touch,justifyContent:'center',paddingHorizontal:space[1]},
   focusActionText:{fontSize:font.sm,fontWeight:'600',color:palette.ink},
   emptyLine:{color:palette.muted,fontSize:font.md,paddingVertical:space[6]},
-  breakAction:{minHeight:size.touch,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderTopWidth:1,borderBottomWidth:1,borderColor:palette.line},
-  breakActionText:{fontSize:font.md,fontWeight:'500',color:palette.ink},
-  breakArrow:{fontSize:24,fontWeight:'300',color:palette.muted},
   treeToggle:{width:30,minHeight:size.touch,alignItems:'center',justifyContent:'center'},
   treeToggleText:{fontSize:24,color:palette.ink,lineHeight:28},
  });
