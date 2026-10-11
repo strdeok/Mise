@@ -25,25 +25,33 @@ const TIMELINE_START_MINUTE = 0;
 const TIMELINE_HEIGHT = 24 * 60;
 
 function TodoForm({ visible, close, editing, parentId }: { visible: boolean; close: () => void; editing: Todo | null; parentId: string | null }) {
-  const todos = useMiseStore((s) => s.todos); const categories = useMiseStore((s) => s.categories); const add = useMiseStore((s) => s.addTodo); const update = useMiseStore((s) => s.updateTodo); const saveCategory = useMiseStore((s) => s.saveCategory); const [title, setTitle] = useState(''); const [selectedParent, setSelectedParent] = useState<string | null>(null); const [selectedCategory, setSelectedCategory] = useState<string | null>(null); const [newCategory, setNewCategory] = useState('');
-  useEffect(() => { if (visible) { setTitle(editing?.title ?? ''); setSelectedParent(editing?.parentId ?? parentId); setSelectedCategory(editing?.categoryId ?? null); setNewCategory(''); } }, [visible, editing, parentId]);
+  const todos = useMiseStore((s) => s.todos); const categories = useMiseStore((s) => s.categories); const add = useMiseStore((s) => s.addTodo); const update = useMiseStore((s) => s.updateTodo); const saveCategory = useMiseStore((s) => s.saveCategory); const [title, setTitle] = useState(''); const [selectedParent, setSelectedParent] = useState<string | null>(null); const [selectedCategory, setSelectedCategory] = useState<string | null>(null); const [newCategory, setNewCategory] = useState(''); const [picker, setPicker] = useState<'parent' | 'category' | null>(null); const [search, setSearch] = useState('');
+  useEffect(() => { if (visible) { setTitle(editing?.title ?? ''); setSelectedParent(editing?.parentId ?? parentId); setSelectedCategory(editing?.categoryId ?? null); setNewCategory(''); setPicker(null); setSearch(''); } }, [visible, editing, parentId]);
   const invalidParents = editing ? descendants(editing.id, todos) : new Set<string>();
-  const createCategory = async () => { const result = await saveCategory(newCategory); if (result) { setSelectedCategory(result); setNewCategory(''); } };
-  return <Modal visible={visible} transparent animationType="slide" onRequestClose={close}><SafeAreaSheet><Card style={s.modal}>
-    <Title>{editing ? 'Todo 수정' : '새 Todo'}</Title>
-    <Field value={title} onChangeText={setTitle} placeholder="예: 통계 화면 구현" />
-    <Label>상위 Todo</Label>
-    <ScrollView horizontal contentContainerStyle={s.chips} keyboardShouldPersistTaps="handled">
-      <Pressable onPress={() => setSelectedParent(null)} style={[s.chip, !selectedParent && s.chipOn]}><Text style={!selectedParent ? s.chipTextOn : s.chipText}>없음</Text></Pressable>
-      {todos.filter((todo) => !invalidParents.has(todo.id) && !todo.archivedAt && todoPath(todo.id, todos).length < 3).map((todo) => <Pressable key={todo.id} onPress={() => setSelectedParent(todo.id)} style={[s.chip, selectedParent === todo.id && s.chipOn]}><Text style={selectedParent === todo.id ? s.chipTextOn : s.chipText}>{todo.title}</Text></Pressable>)}
-    </ScrollView>
-    <Label>카테고리 · 선택 사항</Label>
-    <ScrollView horizontal contentContainerStyle={s.chips} keyboardShouldPersistTaps="handled">
-      <Pressable accessibilityRole="button" accessibilityLabel="카테고리 없음" onPress={() => setSelectedCategory(null)} style={[s.chip, !selectedCategory && s.chipOn]}><Text style={!selectedCategory ? s.chipTextOn : s.chipText}>없음</Text></Pressable>
-      {categories.slice().sort((a, b) => a.order - b.order).map((category) => <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`${category.name} 카테고리 선택`} onPress={() => setSelectedCategory(category.id)} style={s.categoryOption}><CategoryBadge category={category} selected={selectedCategory === category.id} /></Pressable>)}
-    </ScrollView>
-    <View style={s.categoryCreate}><View style={s.flex}><Field value={newCategory} onChangeText={setNewCategory} placeholder="새 카테고리 이름" /></View><Button label="등록" tone="quiet" disabled={!newCategory.trim()} onPress={createCategory} /></View>
-    <View style={s.row}><Button label="취소" tone="quiet" onPress={close} /><Button label="Todo 저장" onPress={async () => { const ok = editing ? await update(editing.id, { title, parentId: selectedParent, categoryId: selectedCategory }) : await add(title, selectedParent, true, selectedCategory); if (ok) close(); }} /></View>
+  const availableParents = todos.filter((todo) => !invalidParents.has(todo.id) && !todo.archivedAt && todoPath(todo.id, todos).length < 3);
+  const matches = (value: string) => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase());
+  const openPicker = (kind: 'parent' | 'category') => { setSearch(''); setPicker(kind); };
+  const createCategory = async () => { const result = await saveCategory(newCategory); if (result) { setSelectedCategory(result); setNewCategory(''); setPicker(null); } };
+  const onBack = () => picker ? setPicker(null) : close();
+  const selectedCategoryData = categories.find((category) => category.id === selectedCategory);
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onBack}><SafeAreaSheet><Card style={s.modal}>
+    {picker ? <>
+      <View style={s.pickerHeader}><Pressable accessibilityRole="button" accessibilityLabel="선택 닫기" onPress={() => setPicker(null)} style={s.pickerBack}><Text style={s.pickerBackText}>‹</Text></Pressable><Title>{picker === 'parent' ? '상위 Todo 선택' : '카테고리 선택'}</Title></View>
+      <Field value={search} onChangeText={setSearch} placeholder={picker === 'parent' ? 'Todo 검색' : '카테고리 검색'} />
+      <Pressable accessibilityRole="button" accessibilityLabel="없음 선택" onPress={() => { picker === 'parent' ? setSelectedParent(null) : setSelectedCategory(null); setPicker(null); }} style={s.pickerRow}><Text style={s.pickerText}>없음</Text>{(picker === 'parent' ? !selectedParent : !selectedCategory) && <Text style={s.pickerCheck}>✓</Text>}</Pressable>
+      {picker === 'parent' ? availableParents.filter((todo) => matches(todoPath(todo.id, todos).join(' / '))).map((todo) => <Pressable key={todo.id} accessibilityRole="button" accessibilityLabel={`${todo.title} 상위 Todo 선택`} onPress={() => { setSelectedParent(todo.id); setPicker(null); }} style={s.pickerRow}><Text numberOfLines={2} style={s.pickerText}>{todoPath(todo.id, todos).join(' / ')}</Text>{selectedParent === todo.id && <Text style={s.pickerCheck}>✓</Text>}</Pressable>) : categories.slice().sort((a, b) => a.order - b.order).filter((category) => matches(category.name)).map((category) => <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`${category.name} 카테고리 선택`} onPress={() => { setSelectedCategory(category.id); setPicker(null); }} style={s.pickerRow}><CategoryBadge category={category} />{selectedCategory === category.id && <Text style={s.pickerCheck}>✓</Text>}</Pressable>)}
+      {picker === 'parent' && !availableParents.some((todo) => matches(todoPath(todo.id, todos).join(' / '))) && <Sub>일치하는 Todo가 없습니다.</Sub>}
+      {picker === 'category' && !categories.some((category) => matches(category.name)) && <Sub>일치하는 카테고리가 없습니다.</Sub>}
+      {picker === 'category' && <View style={s.categoryCreate}><View style={s.flex}><Field value={newCategory} onChangeText={setNewCategory} placeholder="새 카테고리 이름" /></View><Button label="등록" tone="quiet" disabled={!newCategory.trim()} onPress={createCategory} /></View>}
+    </> : <>
+      <Title>{editing ? 'Todo 수정' : '새 Todo'}</Title>
+      <Field value={title} onChangeText={setTitle} placeholder="예: 통계 화면 구현" />
+      <Label>상위 Todo</Label>
+      <Pressable accessibilityRole="button" accessibilityLabel="상위 Todo 선택" onPress={() => openPicker('parent')} style={s.selectionRow}><Text numberOfLines={1} style={s.selectionValue}>{selectedParent ? todoPath(selectedParent, todos).join(' / ') : '없음'}</Text><Text style={s.selectionChevron}>›</Text></Pressable>
+      <Label>카테고리 · 선택 사항</Label>
+      <Pressable accessibilityRole="button" accessibilityLabel="카테고리 선택" onPress={() => openPicker('category')} style={s.selectionRow}><View style={s.flex}>{selectedCategoryData ? <CategoryBadge category={selectedCategoryData} /> : <Text style={s.selectionValue}>없음</Text>}</View><Text style={s.selectionChevron}>›</Text></Pressable>
+      <View style={s.row}><Button label="취소" tone="quiet" onPress={close} /><Button label="Todo 저장" onPress={async () => { const ok = editing ? await update(editing.id, { title, parentId: selectedParent, categoryId: selectedCategory }) : await add(title, selectedParent, true, selectedCategory); if (ok) close(); }} /></View>
+    </>}
   </Card></SafeAreaSheet></Modal>;
 }
 
@@ -83,7 +91,7 @@ function TodoList({ addTodo, editTodo, openTodo, manageCategories }: { addTodo: 
       <Pressable hitSlop={10} onPress={() => openMenu(todo)}><Text style={s.menu}>···</Text></Pressable>
     </Animated.View>, ...(!collapsed ? rows(todo.id, level + 1) : [])];
   });
-  return <ScrollView contentContainerStyle={s.content}><View style={s.head}><View><Label>MISE EN PLACE</Label><Title>전체 Todo</Title></View><View style={s.row}><Button label="카테고리" tone="quiet" onPress={manageCategories} /><Button label="+ 추가" onPress={() => addTodo(null)} /></View></View><Field value={query} onChangeText={setQuery} placeholder="Todo 검색" /><View style={s.period}><Button label="진행 중" tone={!archived ? 'primary' : 'quiet'} onPress={() => setArchived(false)} /><Button label="보관함" tone={archived ? 'primary' : 'quiet'} onPress={() => setArchived(true)} /></View><ScrollView horizontal contentContainerStyle={s.categoryFilters} keyboardShouldPersistTaps="handled"><Pressable onPress={() => setCategoryFilter(null)} style={[s.filterChip, !categoryFilter && s.filterChipOn]}><Text style={!categoryFilter ? s.filterTextOn : s.filterText}>전체</Text></Pressable><Pressable onPress={() => setCategoryFilter('none')} style={[s.filterChip, categoryFilter === 'none' && s.filterChipOn]}><Text style={categoryFilter === 'none' ? s.filterTextOn : s.filterText}>미분류</Text></Pressable>{categories.slice().sort((a, b) => a.order - b.order).map((category) => <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`${category.name} 카테고리 필터`} onPress={() => setCategoryFilter(category.id)} style={s.categoryOption}><CategoryBadge category={category} selected={categoryFilter === category.id} /></Pressable>)}</ScrollView>{roots.length ? rows(null) : <Card><Sub>{query || categoryFilter ? '조건에 맞는 Todo가 없습니다.' : archived ? '보관한 Todo가 없습니다.' : '새 Todo를 추가해 보세요.'}</Sub></Card>}</ScrollView>;
+  return <ScrollView contentContainerStyle={s.content}><View style={s.head}><View><Label>MISE EN PLACE</Label><Title>전체 Todo</Title></View><View style={s.row}><Button label="카테고리" tone="quiet" onPress={manageCategories} /><Button label="+ 추가" onPress={() => addTodo(null)} /></View></View><Field value={query} onChangeText={setQuery} placeholder="Todo 검색" /><View style={s.period}><Button label="진행 중" tone={!archived ? 'primary' : 'quiet'} onPress={() => setArchived(false)} /><Button label="보관함" tone={archived ? 'primary' : 'quiet'} onPress={() => setArchived(true)} /></View><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.categoryFilters} keyboardShouldPersistTaps="handled"><Pressable onPress={() => setCategoryFilter(null)} style={[s.filterChip, !categoryFilter && s.filterChipOn]}><Text style={!categoryFilter ? s.filterTextOn : s.filterText}>전체</Text></Pressable><Pressable onPress={() => setCategoryFilter('none')} style={[s.filterChip, categoryFilter === 'none' && s.filterChipOn]}><Text style={categoryFilter === 'none' ? s.filterTextOn : s.filterText}>미분류</Text></Pressable>{categories.slice().sort((a, b) => a.order - b.order).map((category) => <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`${category.name} 카테고리 필터`} onPress={() => setCategoryFilter(category.id)} style={s.categoryOption}><CategoryBadge category={category} selected={categoryFilter === category.id} /></Pressable>)}</ScrollView>{roots.length ? rows(null) : <Card><Sub>{query || categoryFilter ? '조건에 맞는 Todo가 없습니다.' : archived ? '보관한 Todo가 없습니다.' : '새 Todo를 추가해 보세요.'}</Sub></Card>}</ScrollView>;
 }
 
 function TimetableBlock({ block, index, todoTitle, onEdit, onFocus, onDelete }: { block: ScheduleBlock; index: number; todoTitle: string; onEdit: () => void; onFocus: () => void; onDelete: () => void }) {
@@ -169,6 +177,15 @@ const s = StyleSheet.create({ safe:{flex:1,backgroundColor:palette.bg},app:{flex
   treeToggleText:{fontSize:24,color:palette.ink,lineHeight:28},
   todoMeta:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:space[1],marginTop:space[1]},
   categoryCreate:{flexDirection:'row',alignItems:'center',gap:space[2]},
+  selectionRow:{minHeight:size.touchLarge,borderWidth:1,borderColor:palette.line,borderRadius:8,paddingHorizontal:space[3],flexDirection:'row',alignItems:'center',gap:space[2]},
+  selectionValue:{flex:1,color:palette.ink,fontSize:font.md,fontWeight:'600'},
+  selectionChevron:{color:palette.muted,fontSize:24,lineHeight:28},
+  pickerHeader:{flexDirection:'row',alignItems:'center',gap:space[2]},
+  pickerBack:{width:size.touch,height:size.touch,alignItems:'center',justifyContent:'center'},
+  pickerBackText:{color:palette.ink,fontSize:30,lineHeight:34},
+  pickerRow:{minHeight:size.touchLarge,borderBottomWidth:1,borderColor:palette.line,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:space[2],paddingVertical:space[2]},
+  pickerText:{flex:1,color:palette.ink,fontSize:font.md,fontWeight:'600'},
+  pickerCheck:{color:palette.ink,fontSize:font.lg,fontWeight:'700'},
   categoryOption:{minHeight:size.touch,justifyContent:'center'},
   categoryFilters:{alignItems:'center',gap:space[2]},
   filterChip:{minHeight:size.touch,paddingHorizontal:space[3],borderRadius:99,borderWidth:1,borderColor:palette.line,justifyContent:'center'},
