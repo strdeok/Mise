@@ -13,5 +13,5 @@ export default function RootLayout() {
     const subscription = Notifications.addNotificationResponseReceivedListener(openTimer);
     return () => subscription.remove();
   }, []);
-  return <SafeAreaProvider><StatusBar style="dark" /><Stack screenOptions={{ headerShown: false, animation: 'fade' }}><Stack.Screen name="index" /><Stack.Screen name="timer" options={{ presentation: 'modal' }} /></Stack></SafeAreaProvider>;
+  return <SafeAreaProvider><StatusBar style="dark" /><Stack screenOptions={{ headerShown: false, animation: 'fade' }}><Stack.Screen name="index" /><Stack.Screen name="timer" options={{ presentation: 'card', animation: 'slide_from_right' }} /></Stack></SafeAreaProvider>;
 }

@@ -8,7 +8,7 @@
 
 | 영역 | 포함 기능 |
 | --- | --- |
-| Todo | 3단계 계층, 생성·수정·완료·완료 취소, Today 지정, 순서 변경, 보관, hard delete |
+| Todo | 3단계 계층, 생성·수정·완료·완료 취소, Today 지정, 순서 변경, 보관, hard delete, 선택형 카테고리 생성·수정·삭제·필터와 흑백 배지 |
 | 기록 보존 | Todo 삭제 뒤에도 완료 Focus 원본은 보존하되, 삭제된 Todo에 연결된 기록은 기본 통계와 Today Focus 합계에서 제외 |
 | Schedule | 월간 Calendar 기본 화면, 주간·일간 전환, 주간 7일 열 동시 표시, 5분 단위 블록 생성·수정·삭제, 같은 날짜의 활성 블록 중복 금지, Todo 연결, 빈 시간대 탭 생성, 드래그 이동·드롭 위치 미리보기 |
 | Timer | Focus·Short Break·Long Break, Pause·Resume·Complete·Discard, 목표 도달 뒤 초과 시간 측정, Focus와 Break 전환 제안, 앱 재시작 뒤 활성 세션 복원 |

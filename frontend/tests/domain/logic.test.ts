@@ -3,8 +3,8 @@ import { activeSession, beginReadySession, elapsedSeconds, scheduleError, todoDe
 import type { ScheduleBlock, Session, Todo } from '@/domain/types';
 
 const todos: Todo[] = [
-  { id: 'project', title: '프로젝트', parentId: null, status: 'open', order: 0, todayDateKeys: [] },
-  { id: 'task', title: '작업', parentId: 'project', status: 'open', order: 0, todayDateKeys: [] },
+  { id: 'project', title: '프로젝트', parentId: null, categoryId: null, status: 'open', order: 0, todayDateKeys: [] },
+  { id: 'task', title: '작업', parentId: 'project', categoryId: null, status: 'open', order: 0, todayDateKeys: [] },
 ];
 
 const block = (input: Partial<ScheduleBlock> = {}): ScheduleBlock => ({ id: 'a', dateKey: '2026-10-06', startMinute: 540, endMinute: 600, title: '집중', todoId: null, deletedAt: null, ...input });

@@ -21,6 +21,8 @@ ID는 기능 명세, 계약, 인수 기준을 연결한다. 검증 위치의 `DB
 | TODO-06 | 삭제 대상 트리의 Todo 중 하나라도 활성 Focus와 연결돼 있으면 삭제할 수 없다. | Server transaction |
 | TODO-07 | Todo의 특정 날짜 포함은 Todo 자체와 별도이며 Todo·날짜 조합은 중복될 수 없다. | DB unique |
 | TODO-08 | 부모·순서 변경 시 서버는 자손 depth·순환·소유권을 검사하고 관련 형제의 `order_index`를 중복 없이 재정렬한다. 같은 사용자의 Todo 구조 변경은 서버에서 직렬화한다. | Server transaction, DB lock |
+| TODO-09 | Todo의 `categoryId`는 null 또는 본인 소유 카테고리 하나다. 부모·자식의 카테고리는 서로 독립적이며 자동 상속하지 않는다. | App, Server, DB |
+| TODO-10 | 카테고리 이름은 공백일 수 없고 사용자 내에서 대소문자 무시 중복을 허용하지 않는다. 카테고리 삭제 시 연결된 Todo의 `categoryId`를 null로 설정하며 Todo·Session은 유지한다. | App, Server transaction, DB |
 | SCHEDULE-01 | 블록의 현지 시작·종료는 5분 단위에 맞아야 하고 길이는 5분 이상이어야 한다. `date`·UTC 오프셋·`timezoneId`가 실제 시각과 일치해야 한다. | Server, DB 일부 |
 | SCHEDULE-02 | 같은 사용자의 삭제되지 않은 Schedule Block은 실제 시각 구간이 서로 겹칠 수 없다. 끝 시각과 다음 시작 시각이 같으면 허용한다. 생성·수정의 동시 요청에도 이 규칙을 지킨다. | Server, DB |
 | SCHEDULE-03 | Todo 없는 블록을 허용한다. 연결 Todo는 같은 사용자 소유여야 한다. | Server |

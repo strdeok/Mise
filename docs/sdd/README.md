@@ -8,9 +8,10 @@ Mise Table의 구현 기준 문서다. 원본 기획서와 기능 명세서는 `
 2. [MVP 및 출시 로드맵](planning/release-roadmap.md): 로컬 MVP부터 출시 운영까지의 단계와 우선순위
 3. [기능 명세](features/README.md): 사용자 행동과 기능별 규칙
 4. [도메인 규칙](domain/rules.md) 및 [Session 상태 전이](domain/session-state.md)
-5. [데이터 계약](contracts/data-model.md) 및 [API 계약](contracts/api.md)
-6. [인수 기준과 검증](verification/acceptance.md)
-7. [구현 계획](planning/plan.md) 및 [결정 기록](planning/open-decisions.md)
+5. [모바일 UI 방향](design/mobile-ui-direction.md)
+6. [데이터 계약](contracts/data-model.md) 및 [API 계약](contracts/api.md)
+7. [인수 기준과 검증](verification/acceptance.md)
+8. [구현 계획](planning/plan.md) 및 [결정 기록](planning/open-decisions.md)
 
 ## 구조
 
@@ -32,6 +33,8 @@ docs/sdd/
 ├── domain/
 │   ├── rules.md
 │   └── session-state.md
+├── design/
+│   └── mobile-ui-direction.md
 ├── contracts/
 │   ├── api.md
 │   └── data-model.md
