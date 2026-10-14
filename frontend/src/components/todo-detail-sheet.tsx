@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button, SheetCard, Field, Label, palette, Sub, Title } from '@/components/mise-ui';
 import { SafeAreaSheet } from '@/components/safe-area-sheet';
-import { todoPath } from '@/domain/logic';
+import { formatDuration, todoPath } from '@/domain/logic';
 import type { Todo } from '@/domain/types';
 import { font, size, space } from '@/constants/layout';
 import { useMiseStore } from '@/store/use-mise-store';
@@ -45,6 +45,7 @@ export function TodoDetailSheet({ todoId, onSelect, onEdit, onClose }: {
         </View>
         <Title>{todo?.title}</Title>
         <CategoryBadge category={categories.find((category) => category.id === todo?.categoryId)} />
+        {todo?.estimatedMinutes && <View style={styles.estimate}><Label>예상 소요 시간</Label><Text style={styles.estimateText}>{formatDuration(todo.estimatedMinutes * 60)}</Text></View>}
         <View style={styles.actions}>
           {todo && <Button label="수정" tone="quiet" onPress={() => onEdit(todo)} />}
           {todo?.parentId && <Button label="상위 Todo" tone="quiet" onPress={() => onSelect(todo.parentId!)} />}
@@ -76,6 +77,8 @@ const styles = StyleSheet.create({
   close: { width: size.touch, height: size.touch, alignItems: 'center', justifyContent: 'center' },
   closeText: { fontSize: 28, color: palette.ink, lineHeight: 32 },
   actions: { flexDirection: 'row', gap: space[2] },
+  estimate: { borderLeftWidth: 3, borderColor: palette.blue, backgroundColor: palette.blueSoft, paddingHorizontal: space[3], paddingVertical: space[2], gap: 2 },
+  estimateText: { color: palette.ink, fontSize: font.md, fontWeight: '700' },
   sectionHeading: { flexDirection: 'row', alignItems: 'baseline', gap: space[2], borderTopWidth: 1, borderColor: palette.line, paddingTop: space[4] },
   sectionTitle: { fontSize: font.lg, fontWeight: '600', color: palette.ink },
   childRow: { minHeight: size.touchLarge, flexDirection: 'row', alignItems: 'center', gap: space[2], borderBottomWidth: 1, borderColor: palette.line },

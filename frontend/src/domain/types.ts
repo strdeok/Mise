@@ -10,6 +10,8 @@ export type Todo = {
   categoryId: string | null;
   status: TodoStatus;
   order: number;
+  /** Todo를 계획할 때 입력하는 예상 소요 시간(분). Timer의 포모도로 설정과는 별개다. */
+  estimatedMinutes?: number | null;
   todayDateKeys: string[];
   archivedAt?: number | null;
 };

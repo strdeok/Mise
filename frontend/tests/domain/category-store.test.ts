@@ -36,4 +36,18 @@ describe('Todo 카테고리 동작', () => {
     expect(await useMiseStore.getState().addTodo('작업', null, true, 'missing')).toBe(false);
     expect(useMiseStore.getState().todos).toHaveLength(0);
   });
+
+  it('예상 시간을 Todo에 저장하고 유효하지 않은 값은 거부한다', async () => {
+    expect(await useMiseStore.getState().addTodo('시간 있는 작업', null, true, null, undefined, 90)).toBe(true);
+    const todo = useMiseStore.getState().todos[0];
+    expect(todo.estimatedMinutes).toBe(90);
+
+    expect(await useMiseStore.getState().updateTodo(todo.id, {
+      title: todo.title, parentId: null, categoryId: null, estimatedMinutes: 120,
+    })).toBe(true);
+    expect(useMiseStore.getState().todos[0].estimatedMinutes).toBe(120);
+
+    expect(await useMiseStore.getState().addTodo('잘못된 시간', null, true, null, undefined, 0)).toBe(false);
+    expect(useMiseStore.getState().error).toContain('예상 시간');
+  });
 });

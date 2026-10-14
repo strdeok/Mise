@@ -1,5 +1,5 @@
 import { PropsWithChildren } from 'react';
-import { StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, TextInput, View, type KeyboardTypeOptions, type StyleProp, type ViewStyle } from 'react-native';
 import { font, radius, size, space } from '@/constants/layout';
 import { MotionPressable } from '@/components/motion';
 
@@ -16,7 +16,7 @@ export const palette = {
 export function Card({ children, style }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) { return <View style={[styles.card, style]}>{children}</View>; }
 export function SheetCard({ children, style }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) { return <View style={[styles.card, style, styles.sheet]}>{children}</View>; }
 export function Button({ label, onPress, tone = 'primary', disabled = false }: { label: string; onPress: () => void; tone?: 'primary' | 'quiet' | 'danger'; disabled?: boolean }) { return <MotionPressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress} style={[styles.button, tone === 'quiet' && styles.quiet, tone === 'danger' && styles.danger, disabled && styles.disabled]}><Text style={[styles.buttonText, tone === 'quiet' && styles.quietText]}>{label}</Text></MotionPressable>; }
-export function Field({ value, onChangeText, placeholder }: { value: string; onChangeText: (value: string) => void; placeholder: string }) { return <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#8A8A8A" style={styles.field} />; }
+export function Field({ value, onChangeText, placeholder, keyboardType }: { value: string; onChangeText: (value: string) => void; placeholder: string; keyboardType?: KeyboardTypeOptions }) { return <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#8A8A8A" keyboardType={keyboardType} style={styles.field} />; }
 export const Label = ({ children }: PropsWithChildren) => <Text style={styles.label}>{children}</Text>;
 export const Title = ({ children }: PropsWithChildren) => <Text style={styles.title}>{children}</Text>;
 export const Sub = ({ children }: PropsWithChildren) => <Text style={styles.sub}>{children}</Text>;

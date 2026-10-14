@@ -7,7 +7,7 @@
 | `users` | id, email?, verified_email_normalized?, created_at, updated_at | 내부 사용자. 확인된 이메일의 정규화 값은 nullable unique이며 새 제공자 로그인 시 중복 계정 안내에 사용. 제공자 고유 ID가 인증의 기본 키 |
 | `auth_identities` | id, user_id, provider, provider_user_id, email?, email_verified, created_at, updated_at | `(provider, provider_user_id)` unique, MVP에서는 `user_id`도 unique여서 사용자당 제공자 연결 하나만 허용. 제공자가 확인한 이메일만 중복 검사에 사용 |
 | `refresh_tokens` | id, user_id, token_hash, expires_at, revoked_at, created_at | 사용자 FK, 해시 저장, 기기별 토큰 구분, 갱신 시 교체·이전 토큰 폐기 |
-| `todos` | id, user_id, parent_id, title, description, depth, status, order_index, completed_at, created_at, updated_at | depth 0–2, 자기·순환 참조 금지, hard delete, `(user_id,parent_id)` 조회 |
+| `todos` | id, user_id, parent_id, title, description, estimated_minutes?, depth, status, order_index, completed_at, created_at, updated_at | 예상 시간은 선택 값이며 1–9,999분, depth 0–2, 자기·순환 참조 금지, hard delete, `(user_id,parent_id)` 조회 |
 | `todo_days` | id, user_id, todo_id, date, timezone_id, created_at | `(todo_id,date)` unique, 사용자 일치, Todo hard delete 시 함께 제거 |
 | `schedule_blocks` | id, user_id, todo_id?, date, start_at, end_at, timezone_id, utc_offset_minutes, title?, note?, deleted_at, created_at, updated_at | 기록 당시 기기 현지 날짜·시간, 5분 단위·최소 5분·자정 넘김 금지, soft delete, Todo 선택, Todo hard delete 시 `todo_id` null, `(user_id,date)` 인덱스, 삭제되지 않은 동일 사용자 블록끼리 실제 시각 구간 겹침 금지 |
 | `sessions` | id, user_id, todo_id?, todo_title_snapshot?, todo_path_snapshot?, todo_stats_path_snapshot?, schedule_block_id?, previous_session_id?, type, status, target_seconds, started_at, paused_at?, ended_at?, accumulated_seconds, measured_duration_seconds?, duration_seconds?, completion_mode?, continued_past_target_at?, discarded_at?, local_start_date, timezone_id, utc_offset_minutes, created_at, updated_at | Focus 시작 시 Todo와 제목·경로 스냅샷 필수, 삭제된 Todo의 통계에는 삭제 직전 경로 스냅샷 필수, 완료 duration 필수, 수동 입력 시 계산 시간도 보존, Todo hard delete 시 `todo_id` null, 사용자당 활성 1개, `(user_id, created_at)` 조회 |
@@ -21,6 +21,7 @@
 | 모델 | 핵심 필드 |
 | --- | --- |
 | `ScheduleBlock` | id, dateKey, startMinute, endMinute, title, todoId?, deletedAt? |
+| `Todo` | id, title, parentId?, categoryId?, estimatedMinutes?, status, order, todayDateKeys |
 | `Session` | id, type, status, todoId?, scheduleBlockId?, targetSeconds, accumulatedSeconds, lastResumedAt?, startedAt, completedAt?, measuredSeconds?, recordedSeconds?, completionMode?, localStartDate, timezoneId, utcOffsetMinutes, todoSnapshot?, todoStatsPathSnapshot?, scheduleSnapshot? |
 
 `ScheduleBlock`은 계획이므로 날짜와 분 단위를, `Session`은 실제 사건이므로 epoch timestamp를 사용한다. 완료 시 통계는 `recordedSeconds`를 쓰고, Timer로 측정한 원래 값은 `measuredSeconds`에 남긴다. 삭제되는 Block과 연결된 완료 Focus에는 삭제 직전 제목·날짜·시작·종료를 `scheduleSnapshot`으로 기록해 과거 계획 비교를 고정한다.
