@@ -26,13 +26,10 @@ export const fixture = (): AppData => {
 
 export const localRepository = {
   async load(): Promise<AppData> {
-    try {
-      const raw = await AsyncStorage.getItem(key);
-      return raw ? normalizeStoredData(JSON.parse(raw) as AppData) : fixture();
-    } catch {
-      await AsyncStorage.removeItem(key).catch(() => undefined);
-      return fixture();
-    }
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return fixture();
+    try { return normalizeStoredData(JSON.parse(raw) as AppData); }
+    catch { throw new Error('저장된 데이터 형식을 읽지 못했습니다. 원본은 보존했습니다.'); }
   },
   async save(data: AppData) { await AsyncStorage.setItem(key, JSON.stringify(data)); },
   async reset() { const data = fixture(); await this.save(data); return data; },

@@ -27,7 +27,10 @@ export function TimerSettingsSheet({ visible, close }: { visible: boolean; close
   const save = async () => {
     if (saving) return;
     setSaving(true); setError(null);
-    try { await update(draft); close(); }
+    try {
+      if (await update(draft)) close();
+      else setError('설정을 저장하지 못했습니다. 다시 시도해 주세요.');
+    }
     catch { setError('설정을 저장하지 못했습니다. 다시 시도해 주세요.'); }
     finally { setSaving(false); }
   };

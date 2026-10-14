@@ -9,14 +9,16 @@ import { font, size, space } from '@/constants/layout';
 import { useMiseStore } from '@/store/use-mise-store';
 import { CategoryBadge } from '@/components/todo-categories';
 
-export function TodoDetailSheet({ todoId, onSelect, onEdit, onClose }: {
+export function TodoDetailSheet({ todoId, onSelect, onEdit, onOpenTimer, onClose }: {
   todoId: string | null;
   onSelect: (id: string) => void;
   onEdit: (todo: Todo) => void;
+  onOpenTimer: (todo: Todo) => void;
   onClose: () => void;
 }) {
   const todos = useMiseStore((state) => state.todos);
   const categories = useMiseStore((state) => state.categories);
+  const error = useMiseStore((state) => state.error);
   const addTodo = useMiseStore((state) => state.addTodo);
   const toggleTodo = useMiseStore((state) => state.toggleTodo);
   const [draft, setDraft] = useState('');
@@ -33,6 +35,7 @@ export function TodoDetailSheet({ todoId, onSelect, onEdit, onClose }: {
     if (!todo || !title || saving) return;
     setSaving(true);
     try { if (await addTodo(title, todo.id)) setDraft(''); }
+    catch { /* The sheet keeps the draft and renders the store error below. */ }
     finally { setSaving(false); }
   };
 
@@ -48,12 +51,14 @@ export function TodoDetailSheet({ todoId, onSelect, onEdit, onClose }: {
         {todo?.estimatedMinutes && <View style={styles.estimate}><Label>예상 소요 시간</Label><Text style={styles.estimateText}>{formatDuration(todo.estimatedMinutes * 60)}</Text></View>}
         <View style={styles.actions}>
           {todo && <Button label="수정" tone="quiet" onPress={() => onEdit(todo)} />}
+          {todo?.status === 'open' && <Button label="집중하기" onPress={() => onOpenTimer(todo)} />}
           {todo?.parentId && <Button label="상위 Todo" tone="quiet" onPress={() => onSelect(todo.parentId!)} />}
         </View>
+        {error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
         <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>하위 Todo</Text><Sub>{children.length}개</Sub></View>
         {children.map((child) => <View key={child.id} style={styles.childRow}>
-          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: child.status === 'completed' }} accessibilityLabel={`${child.title} 완료 전환`} onPress={() => toggleTodo(child.id)} style={[styles.check, child.status === 'completed' && styles.checked]}>
-            {child.status === 'completed' && <Text style={styles.checkmark}>✓</Text>}
+          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: child.status === 'completed' }} accessibilityLabel={`${child.title} 완료 전환`} onPress={() => toggleTodo(child.id)} style={styles.checkTarget}>
+            <View style={[styles.check, child.status === 'completed' && styles.checked]}>{child.status === 'completed' && <Text style={styles.checkmark}>✓</Text>}</View>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={`${child.title} 상세 보기`} onPress={() => onSelect(child.id)} style={styles.childTitleButton}>
             <View style={styles.childInfo}><Text style={[styles.childTitle, child.status === 'completed' && styles.done]}>{child.title}</Text><CategoryBadge category={categories.find((category) => category.id === child.categoryId)} /></View>
@@ -77,11 +82,13 @@ const styles = StyleSheet.create({
   close: { width: size.touch, height: size.touch, alignItems: 'center', justifyContent: 'center' },
   closeText: { fontSize: 28, color: palette.ink, lineHeight: 32 },
   actions: { flexDirection: 'row', gap: space[2] },
+  error: { color: palette.ink, fontSize: font.sm, fontWeight: '700', padding: space[2], borderWidth: 1, borderColor: palette.ink, borderRadius: 8 },
   estimate: { borderLeftWidth: 3, borderColor: palette.blue, backgroundColor: palette.blueSoft, paddingHorizontal: space[3], paddingVertical: space[2], gap: 2 },
   estimateText: { color: palette.ink, fontSize: font.md, fontWeight: '700' },
   sectionHeading: { flexDirection: 'row', alignItems: 'baseline', gap: space[2], borderTopWidth: 1, borderColor: palette.line, paddingTop: space[4] },
   sectionTitle: { fontSize: font.lg, fontWeight: '600', color: palette.ink },
   childRow: { minHeight: size.touchLarge, flexDirection: 'row', alignItems: 'center', gap: space[2], borderBottomWidth: 1, borderColor: palette.line },
+  checkTarget: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   check: { width: 23, height: 23, borderRadius: 5, borderWidth: 1.5, borderColor: palette.ink, alignItems: 'center', justifyContent: 'center' },
   checked: { backgroundColor: palette.ink },
   checkmark: { color: palette.card },

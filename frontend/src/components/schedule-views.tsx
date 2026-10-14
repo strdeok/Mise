@@ -1,5 +1,8 @@
-import { useRef, useState } from 'react';
-import { Alert, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { scheduleOnRN } from 'react-native-worklets';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { dateKey, formatClock } from '@/domain/logic';
 import type { ScheduleBlock } from '@/domain/types';
@@ -40,47 +43,52 @@ const startOfWeek = (key: string) => {
   return dateKey(value);
 };
 const weekKeys = (key: string) => Array.from({ length: 7 }, (_, index) => changeDay(startOfWeek(key), index));
-const scheduleAccents = [
-  { fill: palette.blueSoft, line: palette.blue },
-  { fill: palette.mintSoft, line: palette.mint },
-  { fill: palette.purpleSoft, line: palette.purple },
-  { fill: palette.orangeSoft, line: palette.orange },
-];
-const accentFor = (block: ScheduleBlock) => scheduleAccents[block.title.split('').reduce((sum, letter) => sum + letter.charCodeAt(0), 0) % scheduleAccents.length];
+const accentFor = (_block: ScheduleBlock) => ({ fill: palette.greenSoft, line: palette.ink });
 
 function TimetableBlock({ block, todoTitle, onOpen }: { block: ScheduleBlock; todoTitle: string; onOpen: () => void }) {
   const saveBlock = useMiseStore((x) => x.saveBlock);
   const [dragging, setDragging] = useState(false);
-  const [deltaY, setDeltaY] = useState(0);
-  const deltaRef = useRef(0);
+  const deltaY = useSharedValue(0);
   const latestBlock = useRef(block);
   latestBlock.current = block;
   const duration = block.endMinute - block.startMinute;
   const accent = accentFor(block);
-  const proposedStart = Math.max(0, Math.min(1440 - duration, Math.round((block.startMinute + deltaY) / 5) * 5));
   const blockHeight = duration - 2;
-  const responder = useRef(PanResponder.create({
-    onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 5,
-    onMoveShouldSetPanResponderCapture: (_, gesture) => Math.abs(gesture.dy) > 5,
-    onPanResponderGrant: () => setDragging(true),
-    onPanResponderMove: (_, gesture) => { deltaRef.current = gesture.dy; setDeltaY(gesture.dy); },
-    onPanResponderRelease: async () => {
-      const current = latestBlock.current;
-      const currentDuration = current.endMinute - current.startMinute;
-      const start = Math.max(0, Math.min(1440 - currentDuration, Math.round((current.startMinute + deltaRef.current) / 5) * 5));
-      setDragging(false); setDeltaY(0); deltaRef.current = 0;
-      if (start !== current.startMinute) await saveBlock({ id: current.id, dateKey: current.dateKey, startMinute: start, endMinute: start + currentDuration, title: current.title, todoId: current.todoId });
-    },
-    onPanResponderTerminate: () => { setDragging(false); setDeltaY(0); deltaRef.current = 0; },
-  })).current;
+  const blockStyle = useAnimatedStyle(() => ({ transform: [{ translateY: dragging ? deltaY.get() : 0 }], opacity: dragging ? 0.35 : 1 }));
+  const previewStyle = useAnimatedStyle(() => {
+    const snappedStart = Math.max(0, Math.min(1440 - duration, Math.round((block.startMinute + deltaY.get()) / 5) * 5));
+    return { transform: [{ translateY: snappedStart - block.startMinute }] };
+  });
+  const beginDrag = useCallback(() => setDragging(true), []);
+  const cancelDrag = useCallback(() => { deltaY.set(0); setDragging(false); }, [deltaY]);
+  const commitDrag = useCallback(async (startMinute: number) => {
+    const current = latestBlock.current;
+    const currentDuration = current.endMinute - current.startMinute;
+    if (startMinute !== current.startMinute) {
+      await saveBlock({ id: current.id, dateKey: current.dateKey, startMinute, endMinute: startMinute + currentDuration, title: current.title, todoId: current.todoId });
+    }
+    deltaY.set(0);
+    setDragging(false);
+  }, [deltaY, saveBlock]);
+  const pan = useMemo(() => Gesture.Pan()
+    .activateAfterLongPress(250)
+    .onStart(() => { scheduleOnRN(beginDrag); })
+    .onUpdate((event) => { deltaY.set(event.translationY); })
+    .onEnd((event) => {
+      const start = Math.max(0, Math.min(1440 - duration, Math.round((block.startMinute + event.translationY) / 5) * 5));
+      deltaY.set(start - block.startMinute);
+      scheduleOnRN(commitDrag, start);
+    })
+    .onFinalize((_, success) => { if (!success) scheduleOnRN(cancelDrag); }),
+  [block.startMinute, cancelDrag, commitDrag, beginDrag, deltaY, duration]);
   return <>
-    {dragging && <View pointerEvents="none" style={[styles.dropPreview, { top: proposedStart, height: blockHeight }]}>{blockHeight >= 20 && <Text style={styles.dropPreviewText}>{formatClock(proposedStart)}에 놓기</Text>}</View>}
-    <View {...responder.panHandlers} style={[styles.timetableBlock, { top: block.startMinute, height: blockHeight, borderColor: accent.line, backgroundColor: accent.fill, opacity: dragging ? 0.35 : 1, transform: [{ translateY: dragging ? deltaY : 0 }] }]}>
+    {dragging && <Animated.View pointerEvents="none" style={[styles.dropPreview, { top: block.startMinute, height: blockHeight }, previewStyle]} />}
+    <GestureDetector gesture={pan}><Animated.View style={[styles.timetableBlock, { top: block.startMinute, height: blockHeight, borderColor: accent.line, backgroundColor: accent.fill }, blockStyle]}>
       <Pressable onPress={onOpen} accessibilityLabel={`${block.title}, ${formatClock(block.startMinute)}부터 ${formatClock(block.endMinute)}까지. 일정 메뉴 열기`} style={[styles.blockTap, { paddingVertical: duration < 40 ? 1 : 4 }]}>
         {duration >= 20 && <Text numberOfLines={1} style={styles.timetableTitle}>{block.title}</Text>}
         {duration >= 40 && <Text numberOfLines={1} style={styles.timetableMeta}>{formatClock(block.startMinute)}–{formatClock(block.endMinute)} · {todoTitle}</Text>}
       </Pressable>
-    </View>
+    </Animated.View></GestureDetector>
   </>;
 }
 
@@ -207,7 +215,6 @@ const styles = StyleSheet.create({
   timetableTitle: { fontSize: 13, fontWeight: '600', color: palette.ink },
   timetableMeta: { fontSize: 10, color: palette.muted, marginTop: 2 },
   modalActions: { flexDirection: 'row', gap: space[2] },
-  dropPreview: { position: 'absolute', left: space[1], right: 7, borderWidth: 2, borderStyle: 'dashed', borderColor: '#777', backgroundColor: '#D8D8D8', paddingHorizontal: 9, paddingVertical: 7, zIndex: 1, justifyContent: 'center' },
-  dropPreviewText: { color: '#444', fontSize: font.xs, fontWeight: '700' },
+  dropPreview: { position: 'absolute', left: space[1], right: 7, borderWidth: 2, borderStyle: 'dashed', borderColor: palette.ink, backgroundColor: palette.greenSoft, zIndex: 1 },
   modal: { gap: space[3] },
 });

@@ -7,11 +7,11 @@ import { MotionPressable } from '@/components/motion';
 export const palette = {
   bg: '#FAFAF9', card: '#FFFFFF', ink: '#111111', muted: '#686868', line: '#E4E4E2',
   green: '#111111', greenSoft: '#F0F0EE',
-  blue: '#4B76E8', blueSoft: '#EAF0FF',
-  mint: '#30A46C', mintSoft: '#EAF8F0',
-  purple: '#8C58D8', purpleSoft: '#F2EBFF',
-  orange: '#E8993A', orangeSoft: '#FFF1DF',
-  red: '#E34E4E', redSoft: '#FFF0EF',
+  blue: '#3A3A3A', blueSoft: '#F0F0EE',
+  mint: '#555555', mintSoft: '#F0F0EE',
+  purple: '#707070', purpleSoft: '#F0F0EE',
+  orange: '#707070', orangeSoft: '#F0F0EE',
+  red: '#333333', redSoft: '#F0F0EE',
 };
 export function Card({ children, style }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) { return <View style={[styles.card, style]}>{children}</View>; }
 export function SheetCard({ children, style }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) { return <View style={[styles.card, style, styles.sheet]}>{children}</View>; }

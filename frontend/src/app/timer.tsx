@@ -29,19 +29,19 @@ const sector = (minutes: number) => {
 function Dial({ seconds, mode, paused, diameter, immersive = false }: { seconds: number; mode: 'countdown' | 'elapsed'; paused: boolean; diameter: number; immersive?: boolean }) {
   const minutes = Math.max(0, Math.min(60, seconds / 60));
   return <Svg width={diameter} height={diameter} viewBox={`0 0 ${SIZE} ${SIZE}`} accessibilityLabel={`${Math.ceil(minutes)}분 ${mode === 'countdown' ? '남음' : '경과'}`}>
-    <Circle cx={CENTER} cy={CENTER} r={immersive ? RADIUS - 17 : RADIUS} fill={immersive ? palette.bg : '#FFFDF9'} stroke={immersive ? 'none' : '#EEE8E0'} strokeWidth="2" />
+    <Circle cx={CENTER} cy={CENTER} r={immersive ? RADIUS - 17 : RADIUS} fill={immersive ? palette.bg : palette.card} stroke={immersive ? 'none' : palette.line} strokeWidth="2" />
     <Path d={sector(minutes)} fill={palette.red} opacity={paused ? 0.3 : 1} />
     {Array.from({ length: 60 }, (_, index) => {
       const outer = polar(index * 6, RADIUS - 5);
       const inner = polar(index * 6, RADIUS - (index % 5 === 0 ? 17 : 11));
-      return <Line key={index} x1={outer.x} y1={outer.y} x2={inner.x} y2={inner.y} stroke={index % 5 === 0 ? palette.ink : '#B8B5B0'} strokeWidth={index % 5 === 0 ? 1.6 : 0.8} />;
+      return <Line key={index} x1={outer.x} y1={outer.y} x2={inner.x} y2={inner.y} stroke={index % 5 === 0 ? palette.ink : palette.line} strokeWidth={index % 5 === 0 ? 1.6 : 0.8} />;
     })}
     {!immersive && [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((value) => {
       const point = polar(value * 6, RADIUS - 29);
       const overSector = minutes > 0 && (value === 0 || value <= minutes);
       return <SvgText key={value} x={point.x} y={point.y + 3} fill={overSector && !paused ? '#FFFFFF' : palette.muted} fontSize="10" fontWeight="600" textAnchor="middle">{value === 0 ? '60' : value}</SvgText>;
     })}
-    {immersive ? <><Line x1={CENTER} y1={CENTER} x2={polar(minutes * 6, RADIUS - 9).x} y2={polar(minutes * 6, RADIUS - 9).y} stroke={palette.ink} strokeWidth="2" strokeLinecap="round" /><Circle cx={CENTER} cy={CENTER} r="9" fill="#F3EEE7" stroke={palette.ink} strokeWidth="3" /></> : <><Circle cx={CENTER + 3} cy={CENTER + 5} r="34" fill="#D7D0C7" opacity="0.38" /><Circle cx={CENTER} cy={CENTER} r="31" fill="#F3EEE7" stroke="#E1D9D0" strokeWidth="2" /><Circle cx={CENTER} cy={CENTER} r="18" fill="#EED8BB" /><Line x1={CENTER} y1={CENTER} x2={CENTER + 9} y2={CENTER - 8} stroke="#A96D35" strokeWidth="2" strokeLinecap="round" /></>}
+    {immersive ? <><Line x1={CENTER} y1={CENTER} x2={polar(minutes * 6, RADIUS - 9).x} y2={polar(minutes * 6, RADIUS - 9).y} stroke={palette.ink} strokeWidth="2" strokeLinecap="round" /><Circle cx={CENTER} cy={CENTER} r="9" fill={palette.card} stroke={palette.ink} strokeWidth="3" /></> : <><Circle cx={CENTER + 3} cy={CENTER + 5} r="34" fill="#D8D8D6" opacity="0.38" /><Circle cx={CENTER} cy={CENTER} r="31" fill={palette.card} stroke={palette.line} strokeWidth="2" /><Circle cx={CENTER} cy={CENTER} r="18" fill="#E4E4E2" /><Line x1={CENTER} y1={CENTER} x2={CENTER + 9} y2={CENTER - 8} stroke={palette.ink} strokeWidth="2" strokeLinecap="round" /></>}
   </Svg>;
 }
 
@@ -70,6 +70,7 @@ export default function Timer() {
   const blocks = useMiseStore((x) => x.blocks);
   const categories = useMiseStore((x) => x.categories);
   const settings = useMiseStore((x) => x.settings);
+  const error = useMiseStore((x) => x.error);
   const longBreakInterval = settings.longBreakInterval ?? 4;
   const prepare = useMiseStore((x) => x.prepareSession);
   const begin = useMiseStore((x) => x.beginSession);
@@ -145,6 +146,7 @@ export default function Timer() {
     return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.setupWrap}>
       <View style={s.top}><Pressable onPress={leaveTimer} style={s.topAction}><Text style={s.back}>‹ 닫기</Text></Pressable>{settingsButton}</View>
       <View style={s.task}><Label>MISE EN PLACE · TIMER</Label><Title>집중할 일을 골라보세요</Title><Sub>집중 {settings.defaultFocusMinutes}분 · 짧은 휴식 {settings.shortBreakMinutes}분 · 긴 휴식 {settings.longBreakMinutes}분{'\n'}집중 {longBreakInterval}회마다 긴 휴식</Sub></View>
+      {error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
       <View style={s.setupSection}><View style={s.setupSectionHead}><Text style={s.setupTitle}>집중할 Todo</Text><Text style={s.durationHint}>{activeTodos.length}개 열림</Text></View>{activeTodos.length ? activeTodos.map((todo) => <Pressable key={todo.id} accessibilityRole="radio" accessibilityState={{ selected: selectedTodoId === todo.id }} accessibilityLabel={`${todo.title} 선택`} onPress={() => setSelectedTodoId(todo.id)} style={[s.taskChoice, selectedTodoId === todo.id && s.taskChoiceOn]}><View style={[s.radio, selectedTodoId === todo.id && s.radioOn]} /><View style={s.taskChoiceText}><Text numberOfLines={1} style={s.taskChoiceTitle}>{todo.title}</Text><Text numberOfLines={1} style={s.durationHint}>{todo.parentId ? '하위 Todo' : '프로젝트'}</Text></View><CategoryBadge category={categories.find((category) => category.id === todo.categoryId)} /></Pressable>) : <View style={s.emptyTask}><Text style={s.durationLabel}>먼저 할 일을 만들어 주세요.</Text><Button label="오늘로 이동해 Todo 추가" tone="quiet" onPress={leaveTimer} /></View>}</View>
       <Button label="집중 시작" disabled={!selectedTodoId} onPress={startConfiguredFocus} />
     </ScrollView>{settingsSheet}</SafeAreaView>;
@@ -154,14 +156,16 @@ export default function Timer() {
   const reached = session.status !== 'ready' && elapsed >= session.targetSeconds;
   const shown = settings.timerMode === 'countdown' ? Math.max(0, session.targetSeconds - elapsed) : elapsed;
   const caption = session.status === 'ready' ? '시작 전' : session.status === 'paused' ? '일시정지' : settings.timerMode === 'countdown' ? '남은 시간' : '경과 시간';
-  const finish = async (mode: CompletionMode, seconds?: number) => {
-    await clearSessionNotification(session.id);
+  const finish = async (mode: CompletionMode, seconds?: number): Promise<boolean> => {
     const focusDone = completedFocusCount + (session.type === 'focus' ? 1 : 0);
     const nextType: SessionType = session.type === 'focus' ? (focusDone % longBreakInterval === 0 ? 'long_break' : 'short_break') : 'focus';
-    await complete(mode, seconds);
+    const saved = await complete(mode, seconds);
+    if (!saved) { const enabled = session.type === 'focus' ? settings.focusNotificationEnabled : settings.breakNotificationEnabled; scheduleSessionNotification(session, enabled).catch(() => undefined); return false; }
+    await clearSessionNotification(session.id);
     setNext({ type: nextType, todoId: session.todoId, completedLabel: typeLabel(session.type) });
+    return true;
   };
-  const dismiss = async () => { await clearSessionNotification(session.id); await discard(); leaveTimer(); };
+  const dismiss = async () => { if (await discard()) { await clearSessionNotification(session.id); leaveTimer(); } };
   const confirmDiscard = () => {
     if (session.status === 'ready') { dismiss(); return; }
     if (Platform.OS === 'web') { if (window.confirm('기록하지 않고 폐기할까요?')) dismiss(); return; }
@@ -182,6 +186,7 @@ export default function Timer() {
       <Dial seconds={shown} mode={settings.timerMode} paused={session.status === 'paused'} diameter={fullDialSize} immersive />
       <View style={s.fullReadout}><Text numberOfLines={2} style={s.fullTask}>{session.todoSnapshot?.title ?? (session.type === 'focus' ? '집중 시간' : '잠깐 쉬어가세요')}</Text><Text style={s.fullTime}>{timeText(shown)}</Text><Text style={s.fullCaption}>{caption}{reached ? ` · ${formatDuration(elapsed)} 기록 중` : ` · 목표 ${Math.round(session.targetSeconds / 60)}분`}</Text></View>
     </View>
+    {error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
     {targetChoices}
     <View style={s.fullActions}><Pressable accessibilityRole="button" onPress={session.status === 'ready' ? begin : session.status === 'running' ? pause : resume} style={s.fullPrimary}><Text style={s.fullPrimaryText}>{session.status === 'ready' ? '시작' : session.status === 'running' ? '일시정지' : '재개'}</Text></Pressable>{session.status !== 'ready' && <Pressable accessibilityRole="button" onPress={confirmComplete} style={s.fullSecondary}><Text style={s.fullTopText}>완료</Text></Pressable>}</View>
   </ScrollView>{settingsSheet}</SafeAreaView>;
@@ -189,6 +194,7 @@ export default function Timer() {
   return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.wrap}>
     <View style={s.top}><Pressable onPress={leaveTimer} style={s.topAction}><Text style={s.back}>‹ 닫기</Text></Pressable><View style={s.topTools}>{settingsButton}<Pressable onPress={() => changeFullScreen(true)} style={s.topAction}><Text style={s.topActionText}>전체화면 ⤢</Text></Pressable></View></View>
     <View style={s.task}><Label>MISE EN PLACE · {typeLabel(session.type).toUpperCase()}</Label><Title>{session.todoSnapshot?.title ?? (session.type === 'focus' ? '집중 시간' : '휴식 시간')}</Title><Sub>{sessionBlock ? `일정 · ${sessionBlock.title} · ${formatClock(sessionBlock.startMinute)}–${formatClock(sessionBlock.endMinute)}${session.todoSnapshot ? `\nTodo · ${session.todoSnapshot.path.join(' › ')}` : ''}` : session.todoSnapshot?.path.join(' › ') ?? '지금 이 시간에만 집중해 보세요.'}</Sub></View>
+    {error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
     <Cycle type={session.type} interval={longBreakInterval} completed={completedFocusCount} />
     <View style={s.clock}>{dial(dialSize)}<Text style={s.time}>{timeText(shown)}</Text><Text style={s.caption}>{caption}</Text></View>
     <View style={s.meta}><Text style={s.metaText}>목표 {Math.round(session.targetSeconds / 60)}분</Text><Text style={s.dot}>·</Text><Text style={s.metaText}>{session.status === 'ready' ? '시작 버튼을 누르면 기록됩니다' : reached ? `+${Math.floor((elapsed - session.targetSeconds) / 60)}분 초과` : `${Math.max(0, Math.ceil((session.targetSeconds - elapsed) / 60))}분 남음`}</Text></View>
@@ -196,7 +202,7 @@ export default function Timer() {
     {reached && session.continuedPastTargetAt && <Sub>목표 시간을 넘겨 계속 기록 중입니다.</Sub>}
     <View style={s.actions}><View style={s.control}>{primaryControl}</View>{session.status !== 'ready' && <Pressable accessibilityRole="button" accessibilityLabel="완료" onPress={confirmComplete} style={s.roundSecondary}><Text style={s.roundSecondaryText}>완료</Text></Pressable>}</View>
     <View style={s.utility}>{session.status !== 'ready' && <Pressable onPress={() => { setMinutes(String(Math.max(1, Math.round(elapsed / 60)))); setManual(true); }}><Text style={s.utilityText}>시간 직접 수정</Text></Pressable>}<Pressable onPress={confirmDiscard}><Text style={s.utilityText}>{session.status === 'ready' ? '취소' : '폐기'}</Text></Pressable></View>
-    <Modal visible={manual} transparent animationType="slide" onRequestClose={() => setManual(false)}><SafeAreaSheet><SheetCard style={s.modal}><Title>실제 기록 시간</Title><Sub>측정 시간은 {formatDuration(elapsed)}입니다. 1분에서 24시간 사이로 수정할 수 있어요.</Sub><Field value={minutes} onChangeText={setMinutes} placeholder="분" /><View style={s.actions}><Button label="취소" tone="quiet" onPress={() => setManual(false)} /><Button label="저장" onPress={() => { const value = Number(minutes); if (!Number.isFinite(value) || value < 1 || value > 1440) return; setManual(false); finish('manual', Math.round(value) * 60); }} /></View></SheetCard></SafeAreaSheet></Modal>
+    <Modal visible={manual} transparent animationType="slide" onRequestClose={() => setManual(false)}><SafeAreaSheet><SheetCard style={s.modal}><Title>실제 기록 시간</Title><Sub>측정 시간은 {formatDuration(elapsed)}입니다. 1분에서 24시간 사이로 수정할 수 있어요.</Sub><Field value={minutes} onChangeText={setMinutes} placeholder="분" /><View style={s.actions}><Button label="취소" tone="quiet" onPress={() => setManual(false)} /><Button label="저장" onPress={async () => { const value = Number(minutes); if (!Number.isFinite(value) || value < 1 || value > 1440) return; if (await finish('manual', Math.round(value) * 60)) setManual(false); }} /></View></SheetCard></SafeAreaSheet></Modal>
   </ScrollView>{settingsSheet}</SafeAreaView>;
 }
 
@@ -209,7 +215,7 @@ const s = StyleSheet.create({
   durationLabel: { color: palette.ink, fontSize: 15, fontWeight: '600' },
   durationHint: { color: palette.muted, fontSize: 12, fontWeight: '500', marginTop: 3 },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  stepButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.greenSoft, alignItems: 'center', justifyContent: 'center' },
+  stepButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.greenSoft, alignItems: 'center', justifyContent: 'center' },
   stepText: { color: palette.ink, fontSize: 22, fontWeight: '600', lineHeight: 26 },
   durationValue: { minWidth: 52, color: palette.ink, fontSize: 14, fontWeight: '700', textAlign: 'center', fontVariant: ['tabular-nums'] },
   intervalRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
@@ -224,6 +230,7 @@ const s = StyleSheet.create({
   emptyTask: { paddingVertical: 12, gap: 8 },
   wrap: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24, gap: 14 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, backgroundColor: palette.bg },
+  error: { color: palette.ink, fontSize: 14, fontWeight: '600', padding: 12, borderWidth: 1, borderColor: palette.ink, borderRadius: 8 },
   topTools: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   topAction: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
