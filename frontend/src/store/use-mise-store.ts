@@ -7,6 +7,7 @@ type MiseStore = AppData & {
   hydrated: boolean; error: string | null;
   hydrate: () => Promise<void>; reset: () => Promise<void>;
   addTodo: (title: string, parentId?: string | null, today?: boolean, categoryId?: string | null, dateKeys?: string[], estimatedMinutes?: number | null) => Promise<boolean>;
+  saveTodoPlan: (input: { id?: string; title: string; parentId: string | null; categoryId: string | null; todayDateKeys: string[]; estimatedMinutes: number | null; schedule: { dateKey: string; startMinute: number; endMinute: number } | null }) => Promise<boolean>;
   updateTodo: (id: string, input: { title: string; parentId: string | null; categoryId: string | null; todayDateKeys?: string[]; estimatedMinutes?: number | null }) => Promise<boolean>; archiveTodo: (id: string, archived: boolean) => Promise<void>; reorderTodo: (id: string, direction: -1 | 1) => Promise<void>;
   saveCategory: (name: string, categoryId?: string) => Promise<string | null>;
   deleteCategory: (categoryId: string) => Promise<void>;
@@ -46,6 +47,38 @@ export const useMiseStore = create<MiseStore>((set, get) => {
       if (categoryId && !state.categories.some((category) => category.id === categoryId)) { set({ error: '카테고리를 찾을 수 없습니다.' }); return false; }
       const siblings = state.todos.filter((todo) => todo.parentId === parentId);
       return save({ ...state, todos: [...state.todos, { id: id(), title: trimmed, parentId, categoryId, status: 'open', order: siblings.length, estimatedMinutes, todayDateKeys: today ? (dateKeys ?? [dateKey()]) : [] }] });
+    },
+    saveTodoPlan: async (input) => {
+      const state = get(); const title = input.title.trim();
+      const current = input.id ? state.todos.find((todo) => todo.id === input.id) : undefined;
+      if (!title) { set({ error: '할 일 제목을 입력해 주세요.' }); return false; }
+      if (input.estimatedMinutes !== null && (!Number.isInteger(input.estimatedMinutes) || input.estimatedMinutes < 1 || input.estimatedMinutes > 9999)) { set({ error: '예상 시간은 1분에서 9,999분 사이로 입력해 주세요.' }); return false; }
+      if (input.id && !current) { set({ error: '수정할 Todo를 찾을 수 없습니다.' }); return false; }
+      if (input.parentId && !state.todos.some((todo) => todo.id === input.parentId && !todo.archivedAt)) { set({ error: '상위 Todo를 찾을 수 없습니다.' }); return false; }
+      if (current && input.parentId && descendants(current.id, state.todos).has(input.parentId)) { set({ error: '자기 자신 또는 하위 Todo 아래로 이동할 수 없습니다.' }); return false; }
+      if (todoDepth(input.parentId, state.todos) > 2) { set({ error: 'Todo는 3단계까지만 만들 수 있습니다.' }); return false; }
+      if (input.categoryId && !state.categories.some((category) => category.id === input.categoryId)) { set({ error: '카테고리를 찾을 수 없습니다.' }); return false; }
+
+      const todoId = current?.id ?? id();
+      let blocks = state.blocks;
+      let sessions = state.sessions;
+      const linked = current ? blocks.find((block) => block.todoId === todoId && !block.deletedAt) : undefined;
+      if (input.schedule) {
+        const block: ScheduleBlock = { id: linked?.id ?? id(), dateKey: input.schedule.dateKey, startMinute: input.schedule.startMinute, endMinute: input.schedule.endMinute, title, todoId, deletedAt: null };
+        const message = scheduleError(block, blocks);
+        if (message) { set({ error: message }); return false; }
+        blocks = linked ? blocks.map((value) => value.id === linked.id ? block : value) : [...blocks, block];
+      } else if (linked) {
+        const snapshot = { title: linked.title, dateKey: linked.dateKey, plannedStartMinute: linked.startMinute, plannedEndMinute: linked.endMinute };
+        sessions = sessions.map((session) => session.scheduleBlockId === linked.id && session.status === 'completed' && (session.recordedSeconds ?? 0) > 0 ? { ...session, scheduleSnapshot: snapshot } : session);
+        blocks = blocks.map((value) => value.id === linked.id ? { ...value, deletedAt: Date.now() } : value);
+      }
+      const siblings = state.todos.filter((todo) => todo.parentId === input.parentId);
+      const nextTodo: Todo = current
+        ? { ...current, title, parentId: input.parentId, categoryId: input.categoryId, estimatedMinutes: input.estimatedMinutes, todayDateKeys: input.todayDateKeys, order: current.parentId === input.parentId ? current.order : siblings.length }
+        : { id: todoId, title, parentId: input.parentId, categoryId: input.categoryId, status: 'open', order: siblings.length, estimatedMinutes: input.estimatedMinutes, todayDateKeys: input.todayDateKeys };
+      const todos = current ? state.todos.map((todo) => todo.id === todoId ? nextTodo : todo) : [...state.todos, nextTodo];
+      return save({ ...state, todos, blocks, sessions });
     },
     updateTodo: async (todoId, input) => {
       const state = get(); const current = state.todos.find((todo) => todo.id === todoId); const title = input.title.trim(); if (!current || !title) { set({ error: '할 일 제목을 입력해 주세요.' }); return false; }

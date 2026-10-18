@@ -22,7 +22,7 @@ export default function RootLayout() {
     const subscription = Notifications.addNotificationResponseReceivedListener(openTimer);
     return () => subscription.remove();
   }, [hydrated]);
-  return <GestureHandlerRootView style={styles.root}><SafeAreaProvider><StatusBar style="dark" />{!hydrated ? <View style={styles.loading}><ActivityIndicator color={palette.ink} /><Text style={styles.message}>{error ?? '저장된 데이터를 불러오고 있어요.'}</Text>{error && <Pressable accessibilityRole="button" onPress={() => void hydrate()} style={styles.retry}><Text style={styles.retryText}>다시 시도</Text></Pressable>}</View> : <Stack screenOptions={{ headerShown: false, animation: 'fade' }}><Stack.Screen name="index" /><Stack.Screen name="timer" options={{ presentation: 'card', animation: 'slide_from_right' }} /></Stack>}</SafeAreaProvider></GestureHandlerRootView>;
+  return <GestureHandlerRootView style={styles.root}><SafeAreaProvider><StatusBar style="dark" />{!hydrated ? <View style={styles.loading}><ActivityIndicator color={palette.ink} /><Text style={styles.message}>{error ?? '저장된 데이터를 불러오고 있어요.'}</Text>{error && <Pressable accessibilityRole="button" onPress={() => void hydrate()} style={styles.retry}><Text style={styles.retryText}>다시 시도</Text></Pressable>}</View> : <Stack screenOptions={{ headerShown: false, animation: 'fade' }}><Stack.Screen name="index" /><Stack.Screen name="timer" options={{ presentation: 'card', animation: 'slide_from_right' }} /><Stack.Screen name="todo-form" options={{ presentation: 'card', animation: 'slide_from_right' }} /></Stack>}</SafeAreaProvider></GestureHandlerRootView>;
 }
 
 const styles = StyleSheet.create({

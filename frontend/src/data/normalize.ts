@@ -16,6 +16,7 @@ export const normalizeStoredData = (stored: StoredAppData): AppData => {
     categories,
     todos: stored.todos.map((todo) => ({
       ...todo,
+      title: todo.id === 'project' && todo.title === 'Mise Table' ? '프로젝트' : todo.title,
       categoryId: todo.categoryId && categoryIds.has(todo.categoryId) ? todo.categoryId : null,
       estimatedMinutes: Number.isInteger(todo.estimatedMinutes) && (todo.estimatedMinutes ?? 0) > 0 ? todo.estimatedMinutes : null,
     })),

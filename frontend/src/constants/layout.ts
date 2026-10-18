@@ -29,7 +29,7 @@ export const size = {
   timelineHour: 60,
 } as const;
 
-export const radius = { sm: 8, md: 12, lg: 18, pill: 999 } as const;
+export const radius = { sm: 8, md: 12, lg: 18, control: 14, surface: 18, sheet: 28, pill: 999, circle: 999 } as const;
 export const font = { xs: 11, sm: 12, md: 14, lg: 16, xl: 22, display: 28 } as const;
 
 /** 화면 폭에 맞는 공통 좌우 여백. 360dp 이하에서도 콘텐츠 폭을 확보한다. */

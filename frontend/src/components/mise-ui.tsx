@@ -20,12 +20,17 @@ export function Field({ value, onChangeText, placeholder, keyboardType }: { valu
 export const Label = ({ children }: PropsWithChildren) => <Text style={styles.label}>{children}</Text>;
 export const Title = ({ children }: PropsWithChildren) => <Text style={styles.title}>{children}</Text>;
 export const Sub = ({ children }: PropsWithChildren) => <Text style={styles.sub}>{children}</Text>;
+export const PrepLabel = ({ children }: PropsWithChildren) => <View style={styles.prepLabel}><Text style={styles.prepLabelText}>{children}</Text></View>;
+export const TimeValue = ({ children }: PropsWithChildren) => <Text style={styles.timeValue}>{children}</Text>;
 const styles = StyleSheet.create({
-  card: { backgroundColor: palette.card, borderRadius: radius.sm, padding: space[4], borderWidth: 1, borderColor: palette.line, gap: space[2] },
-  sheet: { borderRadius: 28, borderWidth: 0, padding: 20, width: '100%', maxWidth: 600, alignSelf: 'center', shadowColor: '#000', shadowOpacity: .12, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
-  button: { minHeight: size.touch, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space[3], backgroundColor: palette.green },
+  card: { backgroundColor: palette.card, borderRadius: radius.surface, padding: space[4], borderWidth: 1, borderColor: palette.line, gap: space[2] },
+  sheet: { borderRadius: radius.sheet, borderWidth: 0, padding: 20, width: '100%', maxWidth: 600, alignSelf: 'center', shadowColor: '#000', shadowOpacity: .12, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  button: { minHeight: size.touch, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space[3], backgroundColor: palette.green },
   quiet: { backgroundColor: palette.greenSoft }, danger: { backgroundColor: palette.red }, disabled: { opacity: 0.45 },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: font.md }, quietText: { color: palette.green },
-  field: { minHeight: size.touchLarge, borderWidth: 1, borderColor: palette.line, borderRadius: radius.sm, paddingHorizontal: space[3], color: palette.ink, backgroundColor: '#fff' },
+  field: { minHeight: size.touchLarge, borderWidth: 1, borderColor: palette.line, borderRadius: radius.control, paddingHorizontal: space[3], color: palette.ink, backgroundColor: '#fff' },
   label: { color: palette.muted, fontWeight: '600', fontSize: font.xs, letterSpacing: .8 }, title: { fontSize: font.xl, color: palette.ink, fontWeight: '600', letterSpacing: -0.5 }, sub: { color: palette.muted, fontSize: font.md, lineHeight: 20 },
+  prepLabel: { minHeight: 28, alignSelf: 'flex-start', justifyContent: 'center', paddingHorizontal: space[2], borderRadius: radius.pill, backgroundColor: palette.greenSoft },
+  prepLabelText: { color: palette.ink, fontSize: font.sm, fontWeight: '700' },
+  timeValue: { color: palette.ink, fontSize: font.lg, fontWeight: '600', fontVariant: ['tabular-nums'] },
 });

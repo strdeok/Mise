@@ -1,11 +1,11 @@
 import { Chevron } from '@/components/chevron';
+import { MiseTimePicker } from '@/components/mise-time-picker';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition, ReduceMotion } from 'react-native-reanimated';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { activeSession, dateKey, descendants, elapsedSeconds, formatClock, formatDuration, todoPath } from '@/domain/logic';
+import { activeSession, dateKey, elapsedSeconds, formatClock, formatDuration } from '@/domain/logic';
 import { aggregateStats, monthPeriod, movePeriod, weekPeriod } from '@/domain/statistics';
 import type { ScheduleBlock, Todo } from '@/domain/types';
 import { useMiseStore } from '@/store/use-mise-store';
@@ -17,76 +17,20 @@ import { TodoActionsSheet, TodoMenuButton, type MenuAnchor } from '@/components/
 import { CategoryBadge, CategoryManagerSheet } from '@/components/todo-categories';
 import { ScheduleView } from '@/components/schedule-views';
 import { StatsReview, TodayBriefing } from '@/components/mise-dashboard';
-import { Calendar } from 'react-native-calendars';
 import { font, pageGutter, size, space } from '@/constants/layout';
 import { notificationPermission, notificationPermissionStatus, reconcileSessionNotifications } from '@/notifications/local-notifications';
 import { motion } from '@/components/motion';
 import { TimerSettingsSheet } from '@/components/timer-settings-sheet';
 
-const day = (key: string, minute = 0) => { const value = new Date(`${key}T12:00:00`); value.setHours(Math.floor(minute / 60), minute % 60, 0, 0); return value; };
-const minutes = (value: Date) => Math.round((value.getHours() * 60 + value.getMinutes()) / 5) * 5;
-const changeDay = (key: string, amount: number) => { const value = day(key); value.setDate(value.getDate() + amount); return dateKey(value); };
+const changeDay = (key: string, amount: number) => { const value = new Date(`${key}T12:00:00`); value.setDate(value.getDate() + amount); return dateKey(value); };
 const TIMELINE_START_MINUTE = 0;
 const TIMELINE_HEIGHT = 24 * 60;
-
-function TodoForm({ visible, close, editing, parentId, dateContext }: { visible: boolean; close: () => void; editing: Todo | null; parentId: string | null; dateContext: string | null }) {
-  const todos = useMiseStore((s) => s.todos); const categories = useMiseStore((s) => s.categories); const error = useMiseStore((s) => s.error); const add = useMiseStore((s) => s.addTodo); const update = useMiseStore((s) => s.updateTodo); const saveCategory = useMiseStore((s) => s.saveCategory); const [title, setTitle] = useState(''); const [estimatedMinutes, setEstimatedMinutes] = useState(''); const [selectedParent, setSelectedParent] = useState<string | null>(null); const [selectedCategory, setSelectedCategory] = useState<string | null>(null); const [selectedDates, setSelectedDates] = useState<string[]>([]); const [datePickerOpen, setDatePickerOpen] = useState(false); const [saving, setSaving] = useState(false); const [newCategory, setNewCategory] = useState(''); const [picker, setPicker] = useState<'parent' | 'category' | null>(null); const [search, setSearch] = useState(''); const [detailsOpen, setDetailsOpen] = useState(false);
-  useEffect(() => { if (visible) { setTitle(editing?.title ?? ''); setEstimatedMinutes(editing?.estimatedMinutes ? String(editing.estimatedMinutes) : ''); setSelectedParent(editing?.parentId ?? parentId); setSelectedCategory(editing?.categoryId ?? null); setSelectedDates(editing?.todayDateKeys ?? [dateContext ?? dateKey()]); setDatePickerOpen(false); setSaving(false); setNewCategory(''); setPicker(null); setSearch(''); setDetailsOpen(!!editing || !!parentId); } }, [visible, editing, parentId, dateContext]);
-  const invalidParents = editing ? descendants(editing.id, todos) : new Set<string>();
-  const availableParents = todos.filter((todo) => !invalidParents.has(todo.id) && !todo.archivedAt && todoPath(todo.id, todos).length < 3);
-  const matches = (value: string) => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase());
-  const openPicker = (kind: 'parent' | 'category') => { setSearch(''); setPicker(kind); };
-  const createCategory = async () => { const result = await saveCategory(newCategory); if (result) { setSelectedCategory(result); setNewCategory(''); setPicker(null); } };
-  const onBack = () => picker ? setPicker(null) : close();
-  const selectedCategoryData = categories.find((category) => category.id === selectedCategory);
-  const marks = Object.fromEntries(selectedDates.map((date) => [date, { selected: true, selectedColor: palette.ink } ]));
-  const toggleDate = (key: string) => setSelectedDates((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key].sort());
-  const submitTodo = async () => {
-    if (saving) return;
-    const trimmedMinutes = estimatedMinutes.trim();
-    const parsedMinutes = trimmedMinutes ? Number(trimmedMinutes) : null;
-    if (parsedMinutes !== null && (!Number.isInteger(parsedMinutes) || parsedMinutes < 1 || parsedMinutes > 9999)) { useMiseStore.setState({ error: '예상 시간은 1분에서 9,999분 사이로 입력해 주세요.' }); return; }
-    setSaving(true);
-    try {
-      const ok = editing
-        ? await update(editing.id, { title, parentId: selectedParent, categoryId: selectedCategory, todayDateKeys: selectedDates, estimatedMinutes: parsedMinutes })
-        : await add(title, selectedParent, true, selectedCategory, selectedDates, parsedMinutes);
-      if (ok) close();
-    } catch {
-      useMiseStore.setState({ error: 'Todo를 저장하지 못했습니다. 다시 시도해 주세요.' });
-    } finally { setSaving(false); }
-  };
-  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onBack}><SafeAreaSheet><SheetCard style={s.modal}>
-    {picker ? <>
-      <View style={s.pickerHeader}><Pressable accessibilityRole="button" accessibilityLabel="선택 닫기" onPress={() => setPicker(null)} style={s.pickerBack}><Text style={s.pickerBackText}>‹</Text></Pressable><Title>{picker === 'parent' ? '상위 Todo 선택' : '카테고리 선택'}</Title></View>
-      <Field value={search} onChangeText={setSearch} placeholder={picker === 'parent' ? 'Todo 검색' : '카테고리 검색'} />
-      <Pressable accessibilityRole="button" accessibilityLabel="없음 선택" onPress={() => { picker === 'parent' ? setSelectedParent(null) : setSelectedCategory(null); setPicker(null); }} style={s.pickerRow}><Text style={s.pickerText}>없음</Text>{(picker === 'parent' ? !selectedParent : !selectedCategory) && <Text style={s.pickerCheck}>✓</Text>}</Pressable>
-      {picker === 'parent' ? availableParents.filter((todo) => matches(todoPath(todo.id, todos).join(' / '))).map((todo) => <Pressable key={todo.id} accessibilityRole="button" accessibilityLabel={`${todo.title} 상위 Todo 선택`} onPress={() => { setSelectedParent(todo.id); setPicker(null); }} style={s.pickerRow}><Text numberOfLines={2} style={s.pickerText}>{todoPath(todo.id, todos).join(' / ')}</Text>{selectedParent === todo.id && <Text style={s.pickerCheck}>✓</Text>}</Pressable>) : categories.slice().sort((a, b) => a.order - b.order).filter((category) => matches(category.name)).map((category) => <Pressable key={category.id} accessibilityRole="button" accessibilityLabel={`${category.name} 카테고리 선택`} onPress={() => { setSelectedCategory(category.id); setPicker(null); }} style={s.pickerRow}><CategoryBadge category={category} />{selectedCategory === category.id && <Text style={s.pickerCheck}>✓</Text>}</Pressable>)}
-      {picker === 'parent' && !availableParents.some((todo) => matches(todoPath(todo.id, todos).join(' / '))) && <Sub>일치하는 Todo가 없습니다.</Sub>}
-      {picker === 'category' && !categories.some((category) => matches(category.name)) && <Sub>일치하는 카테고리가 없습니다.</Sub>}
-      {picker === 'category' && <View style={s.categoryCreate}><View style={s.flex}><Field value={newCategory} onChangeText={setNewCategory} placeholder="새 카테고리 이름" /></View><Button label="등록" tone="quiet" disabled={!newCategory.trim()} onPress={createCategory} /></View>}
-    </> : <>
-      <Label>{editing ? 'TODO 수정' : '빠른 추가'}</Label>
-      <Title>{editing ? '할 일을 다듬어보세요' : '무엇을 해야 하나요?'}</Title>
-      <Field value={title} onChangeText={setTitle} placeholder="예: 통계 화면 구현" />
-      <View style={s.estimateField}><View style={s.dateHeading}><Label>예상 소요 시간 · 선택 사항</Label><Text style={s.dateSummary}>Timer 설정과 별개</Text></View><Field value={estimatedMinutes} onChangeText={setEstimatedMinutes} placeholder="예: 60 (분)" keyboardType="number-pad" /></View>
-      {detailsOpen && <View style={s.dateField}><View style={s.dateHeading}><Label>할 일 표시 날짜</Label><Text style={s.dateSummary}>{selectedDates.length ? `${selectedDates.length}일 선택` : '날짜 미지정'}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="할 일 날짜 선택 열기" onPress={() => setDatePickerOpen((open) => !open)} style={s.dateToggle}><Text style={s.quickDetailText}>{datePickerOpen ? '달력 닫기' : '날짜 선택'}</Text><Text style={s.selectionChevron}>{datePickerOpen ? '−' : '+'}</Text></Pressable>{selectedDates.length > 0 && <View style={s.dateChips}>{selectedDates.map((date) => <Pressable key={date} onPress={() => toggleDate(date)} style={s.dateChip}><Text style={s.dateChipText}>{new Date(`${date}T12:00:00`).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short' })} ×</Text></Pressable>)}</View>}{datePickerOpen && <Calendar current={selectedDates[0] ?? dateKey()} onDayPress={(value) => toggleDate(value.dateString)} markedDates={marks} theme={{ calendarBackground: palette.card, dayTextColor: palette.ink, monthTextColor: palette.ink, textMonthFontWeight: '700', textDayFontWeight: '600', arrowColor: palette.ink, todayTextColor: palette.ink, textDisabledColor: '#BDBDBD', selectedDayBackgroundColor: palette.ink, selectedDayTextColor: '#fff' }} />}</View>}
-      {!detailsOpen && <Pressable accessibilityRole="button" accessibilityLabel="세부 정보 열기" onPress={() => setDetailsOpen(true)} style={s.quickDetail}><Text style={s.quickDetailText}>{selectedDates.includes(dateKey()) ? '오늘' : selectedDates.length ? `${selectedDates.length}일 선택` : '날짜 미지정'} · 날짜와 세부 정보</Text><Text style={s.selectionChevron}>+</Text></Pressable>}
-      {detailsOpen && <><Label>상위 Todo</Label>
-      <Pressable accessibilityRole="button" accessibilityLabel="상위 Todo 선택" onPress={() => openPicker('parent')} style={s.selectionRow}><Text numberOfLines={1} style={s.selectionValue}>{selectedParent ? todoPath(selectedParent, todos).join(' / ') : '없음'}</Text><Chevron /></Pressable>
-      <Label>카테고리 · 선택 사항</Label>
-      <Pressable accessibilityRole="button" accessibilityLabel="카테고리 선택" onPress={() => openPicker('category')} style={s.selectionRow}><View style={s.flex}>{selectedCategoryData ? <CategoryBadge category={selectedCategoryData} /> : <Text style={[s.selectionValue, { flex: 0 }]}>없음</Text>}</View><Chevron /></Pressable></>}
-      {error && <Text accessibilityRole="alert" style={s.formError}>{error}</Text>}
-      <View style={s.row}><Button label="취소" tone="quiet" onPress={close} /><View style={s.saveButton}><Button label={saving ? '저장 중…' : 'Todo 저장'} disabled={!title.trim() || saving} onPress={submitTodo} /></View></View>
-    </>}
-  </SheetCard></SafeAreaSheet></Modal>;
-}
 
 function BlockForm({ visible, close, selectedDate, editing, initialStartMinute }: { visible: boolean; close: () => void; selectedDate: string; editing: ScheduleBlock | null; initialStartMinute: number | null }) {
   const save = useMiseStore((s) => s.saveBlock); const todos = useMiseStore((s) => s.todos); const error = useMiseStore((s) => s.error); const [title, setTitle] = useState(''); const [start, setStart] = useState(540); const [end, setEnd] = useState(600); const [todoId, setTodoId] = useState<string | null>(null); const [picker, setPicker] = useState<'start' | 'end' | null>(null); const availableTodos = todos.filter((todo) => !todo.archivedAt);
   useEffect(() => { if (visible) { const initialStart = editing?.startMinute ?? initialStartMinute ?? 540; setTitle(editing?.title ?? ''); setStart(initialStart); setEnd(editing?.endMinute ?? Math.min(1440, initialStart + 60)); setTodoId(editing?.todoId ?? null); setPicker(null); } }, [visible, editing, initialStartMinute]);
-  const pick = (kind: 'start' | 'end', value?: Date) => { if (Platform.OS === 'android') setPicker(null); if (value) kind === 'start' ? setStart(minutes(value)) : setEnd(value.getHours() === 0 && value.getMinutes() === 0 ? 1440 : minutes(value)); };
-  return <Modal visible={visible} transparent animationType="slide" onRequestClose={close}><SafeAreaSheet><SheetCard style={s.modal}><Title>{editing ? 'Schedule 수정' : '새 Schedule'}</Title><Field value={title} onChangeText={setTitle} placeholder="일정 제목" /><Label>시작 / 종료</Label><View style={s.row}><Pressable style={s.timeButton} onPress={() => setPicker('start')}><Text style={s.timeButtonText}>{formatClock(start)}</Text></Pressable><Pressable style={s.timeButton} onPress={() => setPicker('end')}><Text style={s.timeButtonText}>{formatClock(end)}</Text></Pressable></View>{picker && <DateTimePicker value={day(selectedDate, picker === 'start' ? start : end)} mode="time" minuteInterval={5} display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={(_, value) => pick(picker, value)} />}{picker && Platform.OS === 'ios' && <Button label="시간 선택 완료" tone="quiet" onPress={() => setPicker(null)} />}<Label>Todo 연결</Label><ScrollView horizontal contentContainerStyle={s.chips}>{availableTodos.map((todo) => <Pressable key={todo.id} onPress={() => setTodoId(todo.id === todoId ? null : todo.id)} style={[s.chip, todoId === todo.id && s.chipOn]}><Text style={todoId === todo.id ? s.chipTextOn : s.chipText}>{todo.title}</Text></Pressable>)}</ScrollView>{error && <Text accessibilityRole="alert" style={s.formError}>{error}</Text>}<View style={s.row}><Button label="취소" tone="quiet" onPress={close} /><Button label="저장" onPress={async () => { try { const ok = await save({ id: editing?.id, dateKey: selectedDate, startMinute: start, endMinute: end, title, todoId }); if (ok) close(); } catch { /* The form stays open and exposes the store error. */ } }} /></View></SheetCard></SafeAreaSheet></Modal>;
+  const pick = (kind: 'start' | 'end', value: string) => { setPicker(null); const [hours, minute] = value.split(':').map(Number); const selected = kind === 'end' && value === '00:00' ? 1440 : hours * 60 + minute; if (kind === 'start') setStart(selected); else setEnd(selected); };
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={close}><SafeAreaSheet><SheetCard style={s.modal}><Title>{editing ? 'Schedule 수정' : '새 Schedule'}</Title><Field value={title} onChangeText={setTitle} placeholder="일정 제목" /><Label>시작 / 종료</Label><View style={s.row}><Pressable style={s.timeButton} onPress={() => setPicker('start')}><Text style={s.timeButtonText}>{formatClock(start)}</Text></Pressable><Pressable style={s.timeButton} onPress={() => setPicker('end')}><Text style={s.timeButtonText}>{formatClock(end)}</Text></Pressable></View><MiseTimePicker visible={!!picker} value={picker === 'end' ? end === 1440 ? '00:00' : formatClock(end) : formatClock(start)} label={picker === 'end' ? '종료 시간' : '시작 시간'} onDismiss={() => setPicker(null)} onConfirm={(value) => picker && pick(picker, value)} /><Label>Todo 연결</Label><ScrollView horizontal contentContainerStyle={s.chips}>{availableTodos.map((todo) => <Pressable key={todo.id} onPress={() => setTodoId(todo.id === todoId ? null : todo.id)} style={[s.chip, todoId === todo.id && s.chipOn]}><Text style={todoId === todo.id ? s.chipTextOn : s.chipText}>{todo.title}</Text></Pressable>)}</ScrollView>{error && <Text accessibilityRole="alert" style={s.formError}>{error}</Text>}<View style={s.row}><Button label="취소" tone="quiet" onPress={close} /><Button label="저장" onPress={async () => { try { const ok = await save({ id: editing?.id, dateKey: selectedDate, startMinute: start, endMinute: end, title, todoId }); if (ok) close(); } catch { /* The form stays open and exposes the store error. */ } }} /></View></SheetCard></SafeAreaSheet></Modal>;
 }
 
 function Today({ addTodo, openTodo, editTodo, openTimer }: { addTodo: () => void; openTodo: (todo: Todo) => void; editTodo: (todo: Todo, dateContext?: string) => void; openTimer: (todo?: Todo, block?: ScheduleBlock) => void }) {
@@ -162,10 +106,18 @@ function Settings({ openTimerSettings }: { openTimerSettings: () => void }) {
 }
 
 export default function Home() {
-  const sessions = useMiseStore((x) => x.sessions); const settings = useMiseStore((x) => x.settings); const prepareSession = useMiseStore((x) => x.prepareSession); const error = useMiseStore((x) => x.error); const [tab, setTab] = useState<Tab>('today'); const [todoForm, setTodoForm] = useState<{ editing: Todo | null; parentId: string | null; dateContext?: string | null } | null>(null); const [todoDetailId, setTodoDetailId] = useState<string | null>(null); const [categoryManagerVisible, setCategoryManagerVisible] = useState(false); const [timerSettingsVisible, setTimerSettingsVisible] = useState(false); const [blockForm, setBlockForm] = useState<{ date: string; block: ScheduleBlock | null; startMinute: number | null } | null>(null); const [now, setNow] = useState(Date.now());
+  const sessions = useMiseStore((x) => x.sessions); const settings = useMiseStore((x) => x.settings); const prepareSession = useMiseStore((x) => x.prepareSession); const error = useMiseStore((x) => x.error); const [tab, setTab] = useState<Tab>('today'); const [todoDetailId, setTodoDetailId] = useState<string | null>(null); const [categoryManagerVisible, setCategoryManagerVisible] = useState(false); const [timerSettingsVisible, setTimerSettingsVisible] = useState(false); const [blockForm, setBlockForm] = useState<{ date: string; block: ScheduleBlock | null; startMinute: number | null } | null>(null); const [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []); useEffect(() => { reconcileSessionNotifications(sessions, settings).catch(() => undefined); }, [sessions, settings]);
   const openTodo = (todo: Todo) => setTodoDetailId(todo.id);
-  const editTodo = (editing: Todo, dateContext: string | null = null) => { setTodoDetailId(null); setTodoForm({ editing, parentId: editing.parentId, dateContext }); };
+  const openTodoForm = (options: { todo?: Todo; parentId?: string | null; dateContext?: string | null }) => {
+    const params = {
+      ...(options.todo ? { todoId: options.todo.id } : {}),
+      ...(options.parentId ? { parentId: options.parentId } : {}),
+      ...(options.dateContext ? { dateContext: options.dateContext } : {}),
+    };
+    router.push({ pathname: '/todo-form', params });
+  };
+  const editTodo = (editing: Todo, dateContext: string | null = null) => { setTodoDetailId(null); openTodoForm({ todo: editing, dateContext }); };
   const openTimer = async (todo?: Todo, block?: ScheduleBlock) => {
     const currentSession = activeSession(useMiseStore.getState().sessions);
     if (!currentSession && todo) {
@@ -179,8 +131,8 @@ export default function Home() {
   return <SafeAreaView style={s.safe}>
     <View style={s.app}>
       <Animated.View key={tab} entering={FadeIn.duration(motion.tabEnterMs).reduceMotion(ReduceMotion.System)} style={s.flex}>
-        {tab === 'today' && <Today addTodo={() => setTodoForm({ editing:null, parentId:null, dateContext: dateKey() })} openTodo={openTodo} editTodo={editTodo} openTimer={(todo, block) => { void openTimer(todo, block); }} />}
-        {tab === 'todos' && <TodoList addTodo={(parentId = null) => setTodoForm({ editing:null, parentId, dateContext: dateKey() })} editTodo={editTodo} openTodo={openTodo} openTimer={openTodoTimer} manageCategories={() => setCategoryManagerVisible(true)} />}
+        {tab === 'today' && <Today addTodo={() => openTodoForm({ dateContext: dateKey() })} openTodo={openTodo} editTodo={editTodo} openTimer={(todo, block) => { void openTimer(todo, block); }} />}
+        {tab === 'todos' && <TodoList addTodo={(parentId = null) => openTodoForm({ parentId, dateContext: dateKey() })} editTodo={editTodo} openTodo={openTodo} openTimer={openTodoTimer} manageCategories={() => setCategoryManagerVisible(true)} />}
         {tab === 'schedule' && <ScheduleView addBlock={(date, block, startMinute) => setBlockForm({ date, block: block ?? null, startMinute: startMinute ?? null })} onOpenTimer={() => router.navigate('/timer')} />}
         {tab === 'stats' && <Stats />}
         {tab === 'settings' && <Settings openTimerSettings={() => setTimerSettingsVisible(true)} />}
@@ -191,7 +143,6 @@ export default function Home() {
     <TodoDetailSheet todoId={todoDetailId} onSelect={setTodoDetailId} onEdit={editTodo} onOpenTimer={openTodoTimer} onClose={() => setTodoDetailId(null)} />
     <TimerSettingsSheet visible={timerSettingsVisible} close={() => setTimerSettingsVisible(false)} />
     <CategoryManagerSheet visible={categoryManagerVisible} close={() => setCategoryManagerVisible(false)} />
-    <TodoForm visible={!!todoForm} close={() => setTodoForm(null)} editing={todoForm?.editing ?? null} parentId={todoForm?.parentId ?? null} dateContext={todoForm?.dateContext ?? null} />
     <BlockForm visible={!!blockForm} close={() => setBlockForm(null)} selectedDate={blockForm?.date ?? dateKey()} editing={blockForm?.block ?? null} initialStartMinute={blockForm?.startMinute ?? null} />
     {error && <Pressable onPress={() => useMiseStore.setState({ error:null })} style={s.toast}><Text style={{color:'#fff'}}>{error}</Text></Pressable>}
   </SafeAreaView>;
